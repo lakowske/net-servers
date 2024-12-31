@@ -3,4 +3,5 @@
 
 def test_pytest():
     """A simple assertion to check if pytest is working."""
-    assert 1 == 1
+    a = 1
+    assert a == 1
