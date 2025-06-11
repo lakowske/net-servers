@@ -120,6 +120,134 @@
                 "clear": false
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Container: Build All Images",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "build-all"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Container: Start All",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "start-all"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Container: Stop All",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "stop-all"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Container: Remove All",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "remove-all", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Container: Remove All Images",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "remove-all-images", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Container: Clean All",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "clean-all", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Container: List All",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "list-containers", "-a"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Container: List Configurations",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "list-configs"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": []
         }
     ]
 }

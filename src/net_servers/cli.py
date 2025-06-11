@@ -228,6 +228,176 @@ def logs(config: str, follow: bool, tail: Optional[int]) -> None:
         sys.exit(1)
 
 
+@container.command("build-all")
+@click.option("--rebuild", is_flag=True, help="Force rebuild (no cache)")
+def build_all(rebuild: bool) -> None:
+    """Build all container images."""
+    configs = list_container_configs()
+    failed = []
+
+    for name, config in configs.items():
+        click.echo(f"Building {name}...")
+        manager = ContainerManager(config)
+        result = manager.build(rebuild=rebuild)
+
+        if result.stdout:
+            click.echo(result.stdout)
+        if result.stderr:
+            click.echo(result.stderr, err=True)
+
+        if not result.success:
+            failed.append(name)
+            click.echo(f"Failed to build {name}", err=True)
+        else:
+            click.echo(f"Successfully built {config.image_name}")
+
+    if failed:
+        click.echo(f"Failed to build: {', '.join(failed)}", err=True)
+        sys.exit(1)
+
+
+@container.command("start-all")
+@click.option("--detached/--interactive", default=True, help="Run in detached mode")
+def start_all(detached: bool) -> None:
+    """Start all containers."""
+    configs = list_container_configs()
+    failed = []
+
+    for name, config in configs.items():
+        click.echo(f"Starting {name}...")
+        manager = ContainerManager(config)
+        result = manager.run(detached=detached)
+
+        if result.stdout:
+            click.echo(result.stdout)
+        if result.stderr:
+            click.echo(result.stderr, err=True)
+
+        if not result.success:
+            failed.append(name)
+            click.echo(f"Failed to start {name}", err=True)
+        else:
+            click.echo(f"Container {config.container_name} started")
+
+    if failed:
+        click.echo(f"Failed to start: {', '.join(failed)}", err=True)
+        sys.exit(1)
+
+
+@container.command("stop-all")
+def stop_all() -> None:
+    """Stop all containers."""
+    configs = list_container_configs()
+    failed = []
+
+    for name, config in configs.items():
+        click.echo(f"Stopping {name}...")
+        manager = ContainerManager(config)
+        result = manager.stop()
+
+        if result.stdout:
+            click.echo(result.stdout)
+        if result.stderr:
+            click.echo(result.stderr, err=True)
+
+        if not result.success:
+            failed.append(name)
+            click.echo(f"Failed to stop {name}", err=True)
+        else:
+            click.echo(f"Container {config.container_name} stopped")
+
+    if failed:
+        click.echo(f"Failed to stop: {', '.join(failed)}", err=True)
+
+
+@container.command("remove-all")
+@click.option("--force", "-f", is_flag=True, help="Force remove")
+def remove_all(force: bool) -> None:
+    """Remove all containers."""
+    configs = list_container_configs()
+    failed = []
+
+    for name, config in configs.items():
+        click.echo(f"Removing container {name}...")
+        manager = ContainerManager(config)
+        result = manager.remove_container(force=force)
+
+        if result.stdout:
+            click.echo(result.stdout)
+        if result.stderr:
+            click.echo(result.stderr, err=True)
+
+        if not result.success:
+            failed.append(name)
+            click.echo(f"Failed to remove container {name}", err=True)
+        else:
+            click.echo(f"Container {config.container_name} removed")
+
+    if failed:
+        click.echo(f"Failed to remove containers: {', '.join(failed)}", err=True)
+
+
+@container.command("remove-all-images")
+@click.option("--force", "-f", is_flag=True, help="Force remove")
+def remove_all_images(force: bool) -> None:
+    """Remove all container images."""
+    configs = list_container_configs()
+    failed = []
+
+    for name, config in configs.items():
+        click.echo(f"Removing image {name}...")
+        manager = ContainerManager(config)
+        result = manager.remove_image(force=force)
+
+        if result.stdout:
+            click.echo(result.stdout)
+        if result.stderr:
+            click.echo(result.stderr, err=True)
+
+        if not result.success:
+            failed.append(name)
+            click.echo(f"Failed to remove image {name}", err=True)
+        else:
+            click.echo(f"Image {config.image_name} removed")
+
+    if failed:
+        click.echo(f"Failed to remove images: {', '.join(failed)}", err=True)
+
+
+@container.command("clean-all")
+@click.option("--force", "-f", is_flag=True, help="Force remove")
+def clean_all(force: bool) -> None:
+    """Stop all containers, remove containers, and remove images."""
+    click.echo("Cleaning all containers and images...")
+
+    # Stop all containers first
+    click.echo("Stopping all containers...")
+    configs = list_container_configs()
+    for config in configs.values():
+        manager = ContainerManager(config)
+        result = manager.stop()
+        if result.success:
+            click.echo(f"Stopped {config.container_name}")
+
+    # Remove all containers
+    click.echo("Removing all containers...")
+    for config in configs.values():
+        manager = ContainerManager(config)
+        result = manager.remove_container(force=force)
+        if result.success:
+            click.echo(f"Removed container {config.container_name}")
+
+    # Remove all images
+    click.echo("Removing all images...")
+    for config in configs.values():
+        manager = ContainerManager(config)
+        result = manager.remove_image(force=force)
+        if result.success:
+            click.echo(f"Removed image {config.image_name}")
+
+    click.echo("Clean complete!")
+
+
 @container.command("list-configs")
 def list_configs() -> None:
     """List available container configurations."""

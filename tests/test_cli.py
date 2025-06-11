@@ -365,3 +365,136 @@ class TestCLI:
         config = mock_manager_class.call_args[0][0]
         assert config.image_name == "custom-image"
         assert config.dockerfile == "custom.dockerfile"
+
+    @patch("net_servers.cli.ContainerManager")
+    def test_build_all_success(
+        self,
+        mock_manager_class: Mock,
+        runner: CliRunner,
+        success_result: ContainerResult,
+    ) -> None:
+        """Test build-all command success."""
+        mock_manager = Mock()
+        mock_manager.build.return_value = success_result
+        mock_manager_class.return_value = mock_manager
+
+        result = runner.invoke(container, ["build-all"])
+
+        assert result.exit_code == 0
+        assert "Building apache..." in result.output
+        assert "Building mail..." in result.output
+        assert "Successfully built" in result.output
+
+    @patch("net_servers.cli.ContainerManager")
+    def test_build_all_partial_failure(
+        self,
+        mock_manager_class: Mock,
+        runner: CliRunner,
+        success_result: ContainerResult,
+        failure_result: ContainerResult,
+    ) -> None:
+        """Test build-all command with partial failure."""
+        mock_manager = Mock()
+        # First call succeeds, second fails
+        mock_manager.build.side_effect = [success_result, failure_result]
+        mock_manager_class.return_value = mock_manager
+
+        result = runner.invoke(container, ["build-all"])
+
+        assert result.exit_code == 1
+        assert "Failed to build: mail" in result.output
+
+    @patch("net_servers.cli.ContainerManager")
+    def test_start_all_success(
+        self,
+        mock_manager_class: Mock,
+        runner: CliRunner,
+        success_result: ContainerResult,
+    ) -> None:
+        """Test start-all command success."""
+        mock_manager = Mock()
+        mock_manager.run.return_value = success_result
+        mock_manager_class.return_value = mock_manager
+
+        result = runner.invoke(container, ["start-all"])
+
+        assert result.exit_code == 0
+        assert "Starting apache..." in result.output
+        assert "Starting mail..." in result.output
+
+    @patch("net_servers.cli.ContainerManager")
+    def test_stop_all_success(
+        self,
+        mock_manager_class: Mock,
+        runner: CliRunner,
+        success_result: ContainerResult,
+    ) -> None:
+        """Test stop-all command success."""
+        mock_manager = Mock()
+        mock_manager.stop.return_value = success_result
+        mock_manager_class.return_value = mock_manager
+
+        result = runner.invoke(container, ["stop-all"])
+
+        assert result.exit_code == 0
+        assert "Stopping apache..." in result.output
+        assert "Stopping mail..." in result.output
+
+    @patch("net_servers.cli.ContainerManager")
+    def test_remove_all_success(
+        self,
+        mock_manager_class: Mock,
+        runner: CliRunner,
+        success_result: ContainerResult,
+    ) -> None:
+        """Test remove-all command success."""
+        mock_manager = Mock()
+        mock_manager.remove_container.return_value = success_result
+        mock_manager_class.return_value = mock_manager
+
+        result = runner.invoke(container, ["remove-all", "-f"])
+
+        assert result.exit_code == 0
+        assert "Removing container apache..." in result.output
+        assert "Removing container mail..." in result.output
+
+    @patch("net_servers.cli.ContainerManager")
+    def test_remove_all_images_success(
+        self,
+        mock_manager_class: Mock,
+        runner: CliRunner,
+        success_result: ContainerResult,
+    ) -> None:
+        """Test remove-all-images command success."""
+        mock_manager = Mock()
+        mock_manager.remove_image.return_value = success_result
+        mock_manager_class.return_value = mock_manager
+
+        result = runner.invoke(container, ["remove-all-images", "-f"])
+
+        assert result.exit_code == 0
+        assert "Removing image apache..." in result.output
+        assert "Removing image mail..." in result.output
+
+    @patch("net_servers.cli.ContainerManager")
+    def test_clean_all_success(
+        self,
+        mock_manager_class: Mock,
+        runner: CliRunner,
+        success_result: ContainerResult,
+    ) -> None:
+        """Test clean-all command success."""
+        mock_manager = Mock()
+        mock_manager.stop.return_value = success_result
+        mock_manager.remove_container.return_value = success_result
+        mock_manager.remove_image.return_value = success_result
+        mock_manager_class.return_value = mock_manager
+
+        result = runner.invoke(container, ["clean-all", "-f"])
+
+        assert result.exit_code == 0
+        assert "Cleaning all containers and images..." in result.output
+        assert "Stopping all containers..." in result.output
+        assert "Removing all containers..." in result.output
+        assert "Removing all images..." in result.output
+        assert "Clean complete!" in result.output
