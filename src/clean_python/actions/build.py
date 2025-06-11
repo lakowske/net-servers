@@ -4,8 +4,11 @@ import os
 import shutil
 
 
-def build():
-    """Build the project."""
+def build() -> None:
+    """Build the project.
+
+    Removes the old build directory if it exists and creates a new one.
+    """
     # Remove old build directory
     if os.path.exists("build"):
         shutil.rmtree("build")

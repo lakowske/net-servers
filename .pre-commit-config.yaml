@@ -8,6 +8,11 @@ repos:
           - id: check-yaml
           - id: check-added-large-files
 
+    - repo: https://github.com/pycqa/isort
+      rev: 5.13.2
+      hooks:
+          - id: isort
+
     - repo: https://github.com/psf/black
       rev: 23.3.0
       hooks:
@@ -19,12 +24,24 @@ repos:
           - id: flake8
             additional_dependencies: [flake8-docstrings]
 
+    - repo: https://github.com/pre-commit/mirrors-mypy
+      rev: v1.16.0
+      hooks:
+          - id: mypy
+            additional_dependencies: [types-requests]
+
+    - repo: https://github.com/PyCQA/bandit
+      rev: 1.7.5
+      hooks:
+          - id: bandit
+            args: ["-c", "pyproject.toml"]
+            additional_dependencies: ["bandit[toml]"]
+
     - repo: local
       hooks:
           - id: pytest-coverage
             name: pytest-coverage
-            entry: pytest --cov=. --cov-report=term-missing --cov-fail-under=80 --cov-report=html
-            language: python
+            entry: bash -c 'pip install -e . && pytest --cov=src --cov-report=term-missing --cov-fail-under=80 --cov-report=html'
+            language: system
             pass_filenames: false
             always_run: true
-            additional_dependencies: ["pytest-cov"]
