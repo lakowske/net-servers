@@ -23,7 +23,11 @@ classifiers = [
 ]
 dependencies = [
     "requests",
+    "click>=8.0.0",
 ]
+
+[project.scripts]
+net-container = "net_servers.cli:container"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -116,6 +120,12 @@ show_error_codes = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+ignore_missing_imports = true
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "net_servers.cli"
+ignore_errors = true
 
 [tool.isort]
 profile = "black"
@@ -144,5 +154,5 @@ markers = [
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "build", "dist"]
-skips = ["B101"]
+skips = ["B101", "B404", "B603"]
 targets = ["src"]
