@@ -105,7 +105,8 @@ class ContainerManager:
         if port_mapping:
             cmd.extend(["-p", port_mapping])
         else:
-            cmd.extend(["-p", f"{self.config.port}:80"])
+            port_mapping = f"{self.config.port}" + ":80"
+            cmd.extend(["-p", port_mapping])
 
         cmd.extend(["--name", self.config.container_name, self.config.image_name])
 

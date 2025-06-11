@@ -235,7 +235,7 @@ def list_configs() -> None:
 
     click.echo("Available container configurations:")
     for name, config in configs.items():
-        click.echo(f"  {name}:")
+        click.echo(f"  {name}" + ":")
         click.echo(f"    image: {config.image_name}")
         click.echo(f"    dockerfile: {config.dockerfile}")
         click.echo(f"    port: {config.port}")

@@ -116,12 +116,13 @@ warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 show_error_codes = true
+# plugins = ["mypy_pytest"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+disallow_untyped_decorators = false
 ignore_missing_imports = true
-ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = "net_servers.cli"
