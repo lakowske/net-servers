@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from clean_python.core import calculate_sum, greet
+from net_servers.core import calculate_sum, greet
 
 
 def test_greet_with_valid_name() -> None:

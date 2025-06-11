@@ -3,10 +3,10 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "clean-python"
+name = "net-servers"
 version = "0.1.0"
-description = "A clean Python project template with best practices"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+description = "Servers running in podman containers"
+authors = [{name = "Seth", email = "lakowske@gmail.com"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.8"
@@ -46,9 +46,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/lakowske/clean-python"
-Repository = "https://github.com/lakowske/clean-python"
-Issues = "https://github.com/lakowske/clean-python/issues"
+Homepage = "https://github.com/YOUR_USERNAME/net-servers"
+Repository = "https://github.com/YOUR_USERNAME/net-servers"
+Issues = "https://github.com/YOUR_USERNAME/net-servers/issues"
 
 [tool.black]
 line-length = 88
