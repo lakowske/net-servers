@@ -58,3 +58,9 @@ Every commit must pass:
 7. Valid YAML syntax
 
 This template ensures that code quality, testing, and documentation standards are maintained throughout the development lifecycle.
+
+## Commit Message Guidelines
+
+- Use clear, concise commit messages that describe the change
+- Do not include AI assistant attribution or advertising in commit messages
+- Focus on the "why" rather than the "what" in commit descriptions
