@@ -12,7 +12,7 @@ This is a template for creating clean, professional Python projects that incorpo
 
 ### Testing & Coverage
 - **Pytest** - Modern testing framework with proper project structure
-- **Coverage reporting** - Minimum 80% code coverage required
+- **Coverage reporting** - Currently at 40% (temporary while building config system), target 80%
 - **HTML coverage reports** - Generated in `htmlcov/` directory
 - **Integration testing** - Structured test organization
 
@@ -58,6 +58,27 @@ Every commit must pass:
 7. Valid YAML syntax
 
 This template ensures that code quality, testing, and documentation standards are maintained throughout the development lifecycle.
+
+## Coding Standards and Common Issues
+
+### Flake8 F-String Guidelines
+Flake8 has specific rules around f-strings that can cause unexpected violations:
+
+**Issue**: Flake8 E231 (missing whitespace after ':') and F541 (f-string missing placeholders)
+```python
+# ❌ Flake8 violations
+port_mapping = f"{self.config.port}:80"  # E231: missing space after ':'
+cmd.extend(["-p", f"25:25"])  # F541: f-string without variables
+```
+
+**Solution**: Break f-strings at colons and use regular strings for static values
+```python
+# ✅ Flake8 compliant
+port_mapping = f"{self.config.port}" + ":80"  # Split at colon
+cmd.extend(["-p", "25:25"])  # Regular string for static values
+```
+
+**General Rule**: When f-strings contain colons followed by static content, break the string at the colon and concatenate with a regular string to avoid flake8 parsing issues.
 
 ## Adding New Container Services
 
@@ -119,6 +140,118 @@ The mail service demonstrates this complete workflow:
 - **Authentication debugging**: Custom Dovecot auth to override system defaults
 - **Complete test coverage**: 11 integration tests covering all functionality
 - **Fast testing**: 2-second timeouts for quick feedback
+
+## Configuration Management System
+
+This project includes a comprehensive configuration management system designed for persistent, dynamic service configuration across container restarts.
+
+### Configuration Architecture
+
+**Directory Structure:**
+```
+/data/
+├── config/                    # Central configuration store
+│   ├── global.yaml           # Global system configuration
+│   ├── users.yaml            # User definitions
+│   ├── domains.yaml          # Domain configurations
+│   └── services/             # Service-specific configs
+│       └── services.yaml
+├── state/                    # Runtime state data
+│   ├── mailboxes/
+│   ├── dns-zones/
+│   └── certificates/
+├── code/                     # Live code mounting for development
+│   └── net_servers/          # Python package mounted for iteration
+└── logs/                     # Centralized logging
+```
+
+### Volume Management
+
+**Development vs Production Modes:**
+- **Development**: Code volumes are read-write for live editing
+- **Production**: Code volumes can be read-only for security
+
+**Volume Types:**
+- **Configuration volumes**: Persistent settings and schema definitions
+- **State volumes**: Runtime data like mailboxes, DNS zones, certificates
+- **Code volumes**: Source code for development iteration
+- **Log volumes**: Centralized logging across all services
+
+### Configuration Schema
+
+**Global Configuration (`global.yaml`):**
+```yaml
+system:
+  domain: "local.dev"
+  admin_email: "admin@local.dev"
+  timezone: "UTC"
+```
+
+**User Configuration (`users.yaml`):**
+```yaml
+users:
+  - username: "admin"
+    email: "admin@local.dev"
+    domains: ["local.dev"]
+    roles: ["admin"]
+    mailbox_quota: "1G"
+```
+
+**Domain Configuration (`domains.yaml`):**
+```yaml
+domains:
+  - name: "local.dev"
+    mx_records: ["mail.local.dev"]
+    a_records:
+      mail: "172.20.0.10"
+      www: "172.20.0.20"
+```
+
+### Configuration-to-Service Pattern
+
+**Workflow:**
+1. **Configuration Change** → Parse & Validate → Generate Service Files → Apply Changes → Reload Services
+2. **Cross-service consistency** through centralized domain and user management
+3. **Service coordination** via shared configuration schemas
+
+**Example Implementation:**
+```python
+# Enable configuration management
+config = get_container_config("mail", use_config_manager=True)
+
+# Configuration manager automatically adds:
+# - Volume mounts for persistent data
+# - Environment variables from global config
+# - Service-specific state directories
+```
+
+### Usage Patterns
+
+**Basic Container Operations (Backward Compatible):**
+```bash
+python -m net_servers.cli build -c mail    # Uses basic config
+python -m net_servers.cli run -c mail      # No persistent volumes
+```
+
+**Advanced Configuration Management:**
+```python
+from net_servers.config.manager import ConfigurationManager
+
+# Initialize with persistent configuration
+config_manager = ConfigurationManager(base_path="/data")
+config_manager.initialize_default_configs()
+
+# Get enhanced container config with volumes and environment
+container_config = get_container_config("mail", use_config_manager=True)
+```
+
+### Benefits
+
+1. **Persistence**: Configuration survives container restarts
+2. **Development Speed**: Live code mounting for rapid iteration
+3. **Centralized Management**: Single source of truth for all configuration
+4. **Service Coordination**: Cross-service configuration consistency
+5. **Scalability**: Easy to add new services following the same pattern
 
 ## Commit Message Guidelines
 

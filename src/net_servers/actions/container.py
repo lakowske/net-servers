@@ -2,8 +2,23 @@
 
 import logging
 import subprocess
-from dataclasses import dataclass
-from typing import List, Optional
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+
+@dataclass
+class VolumeMount:
+    """Configuration for volume mounting."""
+
+    host_path: str
+    container_path: str
+    read_only: bool = False
+
+    def to_podman_arg(self) -> str:
+        """Convert to podman volume argument format."""
+        if self.read_only:
+            return f"{self.host_path}:{self.container_path}:ro"  # noqa: E231
+        return f"{self.host_path}:{self.container_path}"  # noqa: E231
 
 
 @dataclass
@@ -24,6 +39,10 @@ class ContainerConfig:
     dockerfile: str = "Dockerfile"
     port: int = 8080
     container_name: str = ""
+    volumes: List[VolumeMount] = field(default_factory=list)
+    environment: Dict[str, str] = field(default_factory=dict)
+    config_templates: Dict[str, str] = field(default_factory=dict)
+    state_paths: List[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         """Auto-generate container name if not provided."""
@@ -101,12 +120,37 @@ class ContainerManager:
         if detached:
             cmd.append("-d")
 
-        # Use provided port mapping or default
+        # Use provided port mapping or default based on container type
         if port_mapping:
             cmd.extend(["-p", port_mapping])
         else:
-            port_mapping = f"{self.config.port}" + ":80"
-            cmd.extend(["-p", port_mapping])
+            # Default port mappings based on service type
+            if "apache" in self.config.image_name:
+                port_mapping = f"{self.config.port}" + ":80"
+                cmd.extend(["-p", port_mapping])
+            elif "mail" in self.config.image_name:
+                # Map multiple ports for mail service
+                cmd.extend(["-p", "25:25"])  # SMTP
+                cmd.extend(["-p", "143:143"])  # IMAP
+                cmd.extend(["-p", "110:110"])  # POP3
+                cmd.extend(["-p", "993:993"])  # IMAPS
+                cmd.extend(["-p", "995:995"])  # POP3S
+                cmd.extend(["-p", "587:587"])  # SMTP submission
+            elif "dns" in self.config.image_name:
+                port_mapping = f"{self.config.port}" + ":53"
+                cmd.extend(["-p", port_mapping])
+            else:
+                # Generic fallback
+                port_mapping = f"{self.config.port}" + ":80"
+                cmd.extend(["-p", port_mapping])
+
+        # Add volume mounts
+        for volume in self.config.volumes:
+            cmd.extend(["-v", volume.to_podman_arg()])
+
+        # Add environment variables
+        for key, value in self.config.environment.items():
+            cmd.extend(["-e", f"{key}={value}"])
 
         cmd.extend(["--name", self.config.container_name, self.config.image_name])
 

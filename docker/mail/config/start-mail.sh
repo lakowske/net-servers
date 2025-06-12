@@ -27,7 +27,7 @@ chown root:dovecot /etc/dovecot/users
 chmod 640 /etc/dovecot/users
 
 # Create virtual domain files for Postfix
-echo "local" > /etc/postfix/virtual_domains
+echo "local    OK" > /etc/postfix/virtual_domains
 echo "test@local test@local/" > /etc/postfix/virtual_mailboxes
 echo "user@local user@local/" >> /etc/postfix/virtual_mailboxes
 echo "admin@local test@local" > /etc/postfix/virtual_aliases

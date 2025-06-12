@@ -1,6 +1,7 @@
 {
     "version": "2.0.0",
     "tasks": [
+        // ============ Code Quality & Testing ============
         {
             "label": "Run Tests with Coverage",
             "type": "shell",
@@ -121,11 +122,13 @@
             },
             "problemMatcher": []
         },
+
+        // ============ Container Management - Bulk Operations ============
         {
-            "label": "Container: Build All Images",
+            "label": "Container: Build All",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "build-all"],
+            "args": ["-m", "net_servers.cli", "container", "build-all"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -135,13 +138,31 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "detail": "Build all container images"
+        },
+        {
+            "label": "Container: Build All (Rebuild)",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "build-all", "--rebuild"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build all container images from scratch"
         },
         {
             "label": "Container: Start All",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "start-all"],
+            "args": ["-m", "net_servers.cli", "container", "start-all"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -151,13 +172,14 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "detail": "Start all containers in detached mode"
         },
         {
             "label": "Container: Stop All",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "stop-all"],
+            "args": ["-m", "net_servers.cli", "container", "stop-all"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -167,13 +189,14 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "detail": "Stop all running containers"
         },
         {
             "label": "Container: Remove All",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "remove-all", "-f"],
+            "args": ["-m", "net_servers.cli", "container", "remove-all", "-f"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -183,13 +206,14 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "detail": "Remove all containers (forced)"
         },
         {
             "label": "Container: Remove All Images",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "remove-all-images", "-f"],
+            "args": ["-m", "net_servers.cli", "container", "remove-all-images", "-f"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -199,13 +223,14 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "detail": "Remove all container images (forced)"
         },
         {
             "label": "Container: Clean All",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "clean-all", "-f"],
+            "args": ["-m", "net_servers.cli", "container", "clean-all", "-f"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -215,13 +240,14 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "detail": "Stop containers, remove containers and images"
         },
         {
             "label": "Container: List All",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "list-containers", "-a"],
+            "args": ["-m", "net_servers.cli", "container", "list-containers", "-a"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -231,13 +257,14 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "detail": "List all containers (running and stopped)"
         },
         {
             "label": "Container: List Configurations",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "list-configs"],
+            "args": ["-m", "net_servers.cli", "container", "list-configs"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -247,13 +274,16 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": []
+            "problemMatcher": [],
+            "detail": "List available container configurations"
         },
+
+        // ============ Container Testing ============
         {
-            "label": "Container: Integration Tests",
+            "label": "Container: Test All",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "test", "--verbose"],
+            "args": ["-m", "net_servers.cli", "container", "test", "--verbose"],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -267,10 +297,27 @@
             "detail": "Run integration tests for all containers"
         },
         {
+            "label": "Container: Test with Build",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "test", "--build", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build containers and run integration tests"
+        },
+        {
             "label": "Container: Test Apache",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "test", "--config", "apache", "--verbose"],
+            "args": ["-m", "net_servers.cli", "container", "test", "-c", "apache", "--verbose"],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -287,7 +334,7 @@
             "label": "Container: Test Mail",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "test", "--config", "mail", "--verbose"],
+            "args": ["-m", "net_servers.cli", "container", "test", "-c", "mail", "--verbose"],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -301,10 +348,205 @@
             "detail": "Run Mail integration tests"
         },
         {
+            "label": "Container: Test DNS",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "test", "-c", "dns", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run DNS integration tests"
+        },
+
+        // ============ Individual Container Management - Apache ============
+        {
+            "label": "Apache - Build",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "build", "-c", "apache"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build Apache container image"
+        },
+        {
+            "label": "Apache - Run",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "run", "-c", "apache"],
+            "group": "build",
+            "dependsOn": "Apache - Build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build and run Apache container"
+        },
+        {
+            "label": "Apache - Stop",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "stop", "-c", "apache"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Stop Apache container"
+        },
+        {
+            "label": "Apache - Remove",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "remove", "-c", "apache", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Remove Apache container"
+        },
+        {
+            "label": "Apache - Logs",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "logs", "-c", "apache", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Follow Apache container logs"
+        },
+
+        // ============ Individual Container Management - Mail ============
+        {
+            "label": "Mail - Build",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "build", "-c", "mail"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build Mail container image"
+        },
+        {
+            "label": "Mail - Run",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "run", "-c", "mail"],
+            "group": "build",
+            "dependsOn": "Mail - Build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build and run Mail container"
+        },
+        {
+            "label": "Mail - Stop",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "stop", "-c", "mail"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Stop Mail container"
+        },
+        {
+            "label": "Mail - Remove",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "remove", "-c", "mail", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Remove Mail container"
+        },
+        {
+            "label": "Mail - Logs",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "container", "logs", "-c", "mail", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Follow Mail container logs"
+        },
+
+        // ============ Individual Container Management - DNS ============
+        {
             "label": "DNS - Build",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "build", "-c", "dns"],
+            "args": ["-m", "net_servers.cli", "container", "build", "-c", "dns"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -321,7 +563,7 @@
             "label": "DNS - Run",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "run", "-c", "dns"],
+            "args": ["-m", "net_servers.cli", "container", "run", "-c", "dns"],
             "group": "build",
             "dependsOn": "DNS - Build",
             "presentation": {
@@ -336,28 +578,10 @@
             "detail": "Build and run DNS container"
         },
         {
-            "label": "DNS - Test",
-            "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "test", "-c", "dns"],
-            "group": "test",
-            "dependsOn": "DNS - Run",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Build, run, and test DNS container"
-        },
-        {
             "label": "DNS - Stop",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "stop", "-c", "dns"],
+            "args": ["-m", "net_servers.cli", "container", "stop", "-c", "dns"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -371,10 +595,10 @@
             "detail": "Stop DNS container"
         },
         {
-            "label": "DNS - Clean",
+            "label": "DNS - Remove",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "clean", "-c", "dns", "-f"],
+            "args": ["-m", "net_servers.cli", "container", "remove", "-c", "dns", "-f"],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -385,14 +609,14 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Clean DNS container and image"
+            "detail": "Remove DNS container"
         },
         {
-            "label": "Container: Test DNS",
+            "label": "DNS - Logs",
             "type": "shell",
             "command": "python",
-            "args": ["-m", "net_servers.cli", "test", "--config", "dns", "--verbose"],
-            "group": "test",
+            "args": ["-m", "net_servers.cli", "container", "logs", "-c", "dns", "-f"],
+            "group": "build",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -402,16 +626,18 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Run DNS integration tests"
+            "detail": "Follow DNS container logs"
         },
+
+        // ============ Workflow Tasks ============
         {
             "label": "Container: Full Workflow",
             "dependsOrder": "sequence",
             "dependsOn": [
                 "Container: Clean All",
-                "Container: Build All Images",
+                "Container: Build All",
                 "Container: Start All",
-                "Container: Integration Tests"
+                "Container: Test All"
             ],
             "group": {
                 "kind": "build",
@@ -429,13 +655,13 @@
             "detail": "Complete workflow: clean → build → start → test"
         },
         {
-            "label": "Container: Full Workflow with Rebuild",
+            "label": "Container: Full Workflow (Rebuild)",
             "dependsOrder": "sequence",
             "dependsOn": [
                 "Container: Clean All",
-                "Container: Build All with Rebuild",
+                "Container: Build All (Rebuild)",
                 "Container: Start All",
-                "Container: Integration Tests"
+                "Container: Test All"
             ],
             "group": "build",
             "presentation": {
@@ -448,40 +674,6 @@
             },
             "problemMatcher": [],
             "detail": "Complete workflow with forced rebuild: clean → rebuild → start → test"
-        },
-        {
-            "label": "Container: Build All with Rebuild",
-            "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "build-all", "--rebuild"],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Build all container images from scratch"
-        },
-        {
-            "label": "Container: Test with Build",
-            "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "test", "--build", "--verbose"],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Build containers and run integration tests"
         }
     ]
 }
