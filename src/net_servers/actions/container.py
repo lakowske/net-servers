@@ -222,3 +222,21 @@ class ContainerManager:
         cmd = ["podman", "inspect", self.config.container_name]
         result = self._run_command(cmd)
         return result
+
+    def execute_command(self, command: List[str]) -> ContainerResult:
+        """Execute a command inside the running container."""
+        cmd = ["podman", "exec", self.config.container_name] + command
+
+        self.logger.debug(
+            f"Executing command in container {self.config.container_name}: "
+            f"{' '.join(command)}"
+        )
+        result = self._run_command(cmd)
+
+        if not result.success:
+            self.logger.warning(
+                f"Command failed in container {self.config.container_name}: "
+                f"{result.stderr}"
+            )
+
+        return result

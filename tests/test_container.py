@@ -385,6 +385,40 @@ class TestContainerManager:
             timeout=300,
         )
 
+    @patch("subprocess.run")
+    def test_execute_command(self, mock_run: Mock, manager: ContainerManager) -> None:
+        """Test executing command in container."""
+        mock_run.return_value = Mock(returncode=0, stdout="command output", stderr="")
+
+        result = manager.execute_command(["ls", "-la", "/etc"])
+
+        assert result.success
+        assert result.stdout == "command output"
+        mock_run.assert_called_once_with(
+            ["podman", "exec", "test-container", "ls", "-la", "/etc"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+
+    @patch("subprocess.run")
+    def test_execute_command_failure(
+        self, mock_run: Mock, manager: ContainerManager
+    ) -> None:
+        """Test executing command in container that fails."""
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="command failed")
+
+        result = manager.execute_command(["invalid-command"])
+
+        assert not result.success
+        assert result.stderr == "command failed"
+        mock_run.assert_called_once_with(
+            ["podman", "exec", "test-container", "invalid-command"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+
 
 class TestContainerConfigs:
     """Test container configuration functions."""
@@ -406,6 +440,15 @@ class TestContainerConfigs:
         assert config.dockerfile == "docker/mail/Dockerfile"
         assert config.port == 25
         assert config.container_name == "net-servers-mail"
+
+    def test_get_dns_config(self) -> None:
+        """Test getting DNS configuration."""
+        config = get_container_config("dns")
+
+        assert config.image_name == "net-servers-dns"
+        assert config.dockerfile == "docker/dns/Dockerfile"
+        assert config.port == 53
+        assert config.container_name == "net-servers-dns"
 
     def test_get_unknown_config(self) -> None:
         """Test getting unknown configuration raises error."""

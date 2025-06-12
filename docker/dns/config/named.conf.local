@@ -1,0 +1,33 @@
+// Local zones configuration
+// This file contains the local zone definitions for development
+
+// Forward zone for local.dev domain
+zone "local.dev" {
+    type master;
+    file "/etc/bind/zones/db.local.zone";
+    allow-update { localhost; };
+    notify no;
+};
+
+// Reverse zone for local network (192.168.0.0/24)
+zone "0.168.192.in-addr.arpa" {
+    type master;
+    file "/etc/bind/zones/db.local.rev";
+    allow-update { localhost; };
+    notify no;
+};
+
+// Additional reverse zones can be added here for other network ranges
+// Example for 172.16.0.0/12:
+// zone "16.172.in-addr.arpa" {
+//     type master;
+//     file "/etc/bind/zones/db.172.16.rev";
+//     allow-update { localhost; };
+//     notify no;
+// };
+
+// Dynamic update key (for nsupdate)
+key "rndc-key" {
+    algorithm hmac-sha256;
+    secret "VGhpcyBpcyBhIHNhbXBsZSBrZXkgZm9yIGRlbW9uc3RyYXRpb24gb25seQ==";
+};

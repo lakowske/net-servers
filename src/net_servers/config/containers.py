@@ -18,6 +18,12 @@ CONTAINER_CONFIGS: Dict[str, ContainerConfig] = {
         port=25,
         container_name="net-servers-mail",
     ),
+    "dns": ContainerConfig(
+        image_name="net-servers-dns",
+        dockerfile="docker/dns/Dockerfile",
+        port=53,
+        container_name="net-servers-dns",
+    ),
 }
 
 

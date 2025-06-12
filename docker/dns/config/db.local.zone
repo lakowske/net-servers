@@ -1,0 +1,34 @@
+$TTL    604800
+@       IN      SOA     ns1.local.dev. admin.local.dev. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+
+; Name servers
+@       IN      NS      ns1.local.dev.
+
+; A records
+ns1.local.dev.          IN      A       192.168.1.10
+www.local.dev.          IN      A       192.168.1.11
+mail.local.dev.         IN      A       192.168.1.12
+apache.local.dev.       IN      A       192.168.1.11
+
+; Mail server records
+@       IN      MX      10      mail.local.dev.
+
+; CNAME records
+ftp.local.dev.          IN      CNAME   www.local.dev.
+webmail.local.dev.      IN      CNAME   mail.local.dev.
+
+; TXT records for mail authentication
+@       IN      TXT     "v=spf1 mx ~all"
+_dmarc.local.dev.       IN      TXT     "v=DMARC1; p=none; rua=mailto:dmarc@local.dev"
+
+; SRV records for services
+_http._tcp.local.dev.   IN      SRV     10 5 80 www.local.dev.
+_https._tcp.local.dev.  IN      SRV     10 5 443 www.local.dev.
+_smtp._tcp.local.dev.   IN      SRV     10 5 25 mail.local.dev.
+_imap._tcp.local.dev.   IN      SRV     10 5 143 mail.local.dev.
+_pop3._tcp.local.dev.   IN      SRV     10 5 110 mail.local.dev.

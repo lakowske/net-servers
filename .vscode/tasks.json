@@ -301,6 +301,110 @@
             "detail": "Run Mail integration tests"
         },
         {
+            "label": "DNS - Build",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "build", "-c", "dns"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build DNS container image"
+        },
+        {
+            "label": "DNS - Run",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "run", "-c", "dns"],
+            "group": "build",
+            "dependsOn": "DNS - Build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build and run DNS container"
+        },
+        {
+            "label": "DNS - Test",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "test", "-c", "dns"],
+            "group": "test",
+            "dependsOn": "DNS - Run",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build, run, and test DNS container"
+        },
+        {
+            "label": "DNS - Stop",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "stop", "-c", "dns"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Stop DNS container"
+        },
+        {
+            "label": "DNS - Clean",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "clean", "-c", "dns", "-f"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Clean DNS container and image"
+        },
+        {
+            "label": "Container: Test DNS",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "test", "--config", "dns", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run DNS integration tests"
+        },
+        {
             "label": "Container: Full Workflow",
             "dependsOrder": "sequence",
             "dependsOn": [

@@ -1,0 +1,71 @@
+options {
+    directory "/var/cache/bind";
+
+    // Enable recursion for local network
+    recursion yes;
+    allow-recursion { localnets; localhost; };
+
+    // Listen on all interfaces
+    listen-on port 53 { any; };
+    listen-on-v6 port 53 { any; };
+
+    // Allow queries from local networks
+    allow-query { localnets; localhost; };
+
+    // Forwarders for external DNS resolution
+    forwarders {
+        8.8.8.8;
+        8.8.4.4;
+        1.1.1.1;
+    };
+
+    // Forward first, then try local resolution
+    forward first;
+
+    // Security settings
+    dnssec-validation auto;
+    auth-nxdomain no;
+    version none;
+    hostname none;
+    server-id none;
+
+    // Logging
+    querylog yes;
+};
+
+// Logging configuration
+logging {
+    channel default_log {
+        file "/var/log/bind/named.log" versions 3 size 5m;
+        severity info;
+        print-category yes;
+        print-severity yes;
+        print-time yes;
+    };
+
+    channel security_log {
+        file "/var/log/bind/security.log" versions 3 size 5m;
+        severity info;
+        print-category yes;
+        print-severity yes;
+        print-time yes;
+    };
+
+    category default { default_log; };
+    category general { default_log; };
+    category database { default_log; };
+    category security { security_log; };
+    category config { default_log; };
+    category resolver { default_log; };
+    category xfer-in { default_log; };
+    category xfer-out { default_log; };
+    category notify { default_log; };
+    category client { default_log; };
+    category unmatched { default_log; };
+    category queries { default_log; };
+    category network { default_log; };
+    category update { default_log; };
+    category dispatch { default_log; };
+    category dnssec { default_log; };
+    category lame-servers { default_log; };
+};

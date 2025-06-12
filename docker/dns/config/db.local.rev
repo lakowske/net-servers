@@ -1,0 +1,15 @@
+$TTL    604800
+@       IN      SOA     ns1.local.dev. admin.local.dev. (
+                              2         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+
+; Name servers
+@       IN      NS      ns1.local.dev.
+
+; PTR records for reverse DNS
+10      IN      PTR     ns1.local.dev.
+11      IN      PTR     www.local.dev.
+12      IN      PTR     mail.local.dev.

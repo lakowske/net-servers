@@ -395,14 +395,18 @@ class TestCLI:
     ) -> None:
         """Test build-all command with partial failure."""
         mock_manager = Mock()
-        # First call succeeds, second fails
-        mock_manager.build.side_effect = [success_result, failure_result]
+        # First call succeeds, second fails, third succeeds
+        mock_manager.build.side_effect = [
+            success_result,
+            failure_result,
+            success_result,
+        ]
         mock_manager_class.return_value = mock_manager
 
         result = runner.invoke(container, ["build-all"])
 
         assert result.exit_code == 1
-        assert "Failed to build: mail" in result.output
+        assert "Failed to build mail" in result.output
 
     @patch("net_servers.cli.ContainerManager")
     def test_start_all_success(
