@@ -1,0 +1,48 @@
+# Basic Postfix configuration for development mail server
+smtpd_banner = $myhostname ESMTP $mail_name (Development)
+biff = no
+append_dot_mydomain = no
+
+# Network settings
+inet_interfaces = all
+inet_protocols = all
+mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 172.16.0.0/12 192.168.0.0/16 10.0.0.0/8
+
+# Domain settings
+myhostname = mail.local
+mydomain = local
+mydestination = $myhostname, localhost.$mydomain, localhost
+
+# Virtual domains and users
+virtual_mailbox_domains = hash:/etc/postfix/virtual_domains
+virtual_mailbox_base = /var/mail/vhosts
+virtual_mailbox_maps = hash:/etc/postfix/virtual_mailboxes
+virtual_alias_maps = hash:/etc/postfix/virtual_aliases
+virtual_minimum_uid = 5000
+virtual_uid_maps = static:5000
+virtual_gid_maps = static:5000
+
+# TLS settings (optional for development)
+smtpd_use_tls = no
+smtp_use_tls = no
+
+# Message size limit (50MB)
+message_size_limit = 52428800
+
+# Delivery settings
+virtual_transport = lmtp:unix:private/dovecot-lmtp
+
+# SASL authentication
+smtpd_sasl_type = dovecot
+smtpd_sasl_path = private/auth
+smtpd_sasl_auth_enable = yes
+smtpd_sasl_security_options = noanonymous
+smtpd_sasl_local_domain = $myhostname
+
+# Restrictions
+smtpd_recipient_restrictions = permit_sasl_authenticated, permit_mynetworks, reject_unauth_destination
+smtpd_sender_restrictions = permit_sasl_authenticated, permit_mynetworks
+smtpd_client_restrictions = permit_sasl_authenticated, permit_mynetworks
+
+# Logging
+maillog_file = /var/log/postfix/postfix.log

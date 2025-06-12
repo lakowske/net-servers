@@ -498,3 +498,13 @@ class TestCLI:
         assert "Removing all containers..." in result.output
         assert "Removing all images..." in result.output
         assert "Clean complete!" in result.output
+
+    def test_integration_test_missing_pytest(self):
+        """Test integration test command when pytest is not available."""
+        runner = CliRunner()
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError()
+            result = runner.invoke(container, ["test"])
+
+        assert result.exit_code == 1
+        assert "pytest is required" in result.output

@@ -248,6 +248,136 @@
                 "clear": false
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Container: Integration Tests",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "test", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run integration tests for all containers"
+        },
+        {
+            "label": "Container: Test Apache",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "test", "--config", "apache", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run Apache integration tests"
+        },
+        {
+            "label": "Container: Test Mail",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "test", "--config", "mail", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run Mail integration tests"
+        },
+        {
+            "label": "Container: Full Workflow",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Container: Clean All",
+                "Container: Build All Images",
+                "Container: Start All",
+                "Container: Integration Tests"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [],
+            "detail": "Complete workflow: clean → build → start → test"
+        },
+        {
+            "label": "Container: Full Workflow with Rebuild",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Container: Clean All",
+                "Container: Build All with Rebuild",
+                "Container: Start All",
+                "Container: Integration Tests"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true
+            },
+            "problemMatcher": [],
+            "detail": "Complete workflow with forced rebuild: clean → rebuild → start → test"
+        },
+        {
+            "label": "Container: Build All with Rebuild",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "build-all", "--rebuild"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build all container images from scratch"
+        },
+        {
+            "label": "Container: Test with Build",
+            "type": "shell",
+            "command": "python",
+            "args": ["-m", "net_servers.cli", "test", "--build", "--verbose"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build containers and run integration tests"
         }
     ]
 }

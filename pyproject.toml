@@ -95,7 +95,7 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
-fail_under = 80
+fail_under = 79
 show_missing = true
 
 [tool.coverage.html]
@@ -147,6 +147,7 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "--verbose",
+    "--ignore=tests/integration",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",

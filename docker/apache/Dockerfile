@@ -21,6 +21,8 @@ RUN apt-get update && \
         apache2 \
         apache2-utils \
         curl \
+        net-tools \
+        iproute2 \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

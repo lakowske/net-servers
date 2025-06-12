@@ -412,5 +412,89 @@ def list_configs() -> None:
         click.echo(f"    container_name: {config.container_name}")
 
 
+@container.command("test")
+@click.option(
+    "--config",
+    "-c",
+    help="Config name to test (apache, mail). If not specified, tests all containers",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose test output")
+@click.option("--build", "-b", is_flag=True, help="Build containers before testing")
+def test_integration(config: Optional[str], verbose: bool, build: bool) -> None:
+    """Run integration tests for container services."""
+    import subprocess
+
+    # Check if pytest is available
+    try:
+        subprocess.run(  # nosec B607
+            [sys.executable, "-m", "pytest", "--version"],
+            capture_output=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        click.echo("Error: pytest is required for integration tests", err=True)
+        click.echo("Install with: pip install pytest requests", err=True)
+        sys.exit(1)
+
+    # Check if podman is available
+    try:
+        subprocess.run(
+            ["/usr/bin/podman", "--version"], capture_output=True, check=True
+        )  # nosec B607
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        try:
+            # Fallback to podman in PATH
+            subprocess.run(
+                ["podman", "--version"], capture_output=True, check=True
+            )  # nosec B607
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            click.echo("Error: podman is required for integration tests", err=True)
+            click.echo(
+                "Please install podman to run container integration tests", err=True
+            )
+            sys.exit(1)
+
+    if build:
+        click.echo("Building containers before testing...")
+        if config:
+            # Build specific container
+            container_config = get_container_config(config)
+            manager = ContainerManager(container_config)
+            result = manager.build()
+            if not result.success:
+                click.echo(f"Failed to build {config} container", err=True)
+                sys.exit(1)
+            click.echo(f"Successfully built {config} container")
+        else:
+            # Build all containers
+            configs = list_container_configs()
+            for name, container_config in configs.items():
+                manager = ContainerManager(container_config)
+                result = manager.build()
+                if not result.success:
+                    click.echo(f"Failed to build {name} container", err=True)
+                    sys.exit(1)
+                click.echo(f"Successfully built {name} container")
+
+    # Run integration tests
+    test_args = [sys.executable, "-m", "pytest"]
+
+    if config:
+        # Test specific container
+        test_args.append(f"tests/integration/test_{config}.py")
+    else:
+        # Test all containers
+        test_args.append("tests/integration/")
+
+    if verbose:
+        test_args.extend(["-v", "-s"])
+
+    click.echo("Running integration tests...")
+    click.echo(f"Command: {' '.join(test_args)}")
+
+    result = subprocess.run(test_args)
+    sys.exit(result.returncode)
+
+
 if __name__ == "__main__":
     container()

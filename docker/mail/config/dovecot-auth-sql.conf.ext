@@ -1,0 +1,12 @@
+# Authentication for SQL users
+# For development, we'll use a simple passdb/userdb setup
+
+passdb {
+  driver = passwd-file
+  args = scheme=PLAIN username_format=%u /etc/dovecot/users
+}
+
+userdb {
+  driver = static
+  args = uid=vmail gid=vmail home=/var/mail/vhosts/%d/%n
+}
