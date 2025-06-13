@@ -18,6 +18,8 @@ pyflakes==3.2.0
 pytest==8.3.4
 pytest-cov==6.0.0
 requests==2.32.3
+pydantic==2.10.4
 PyYAML==6.0.2
 snowballstemmer==2.2.0
 virtualenv==20.28.0
+watchdog==6.0.0

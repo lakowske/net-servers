@@ -7,7 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 from net_servers.actions.container import ContainerResult
-from net_servers.cli import container
+from net_servers.cli import cli
 
 
 class TestCLI:
@@ -34,7 +34,7 @@ class TestCLI:
 
     def test_list_configs(self, runner: CliRunner) -> None:
         """Test list-configs command."""
-        result = runner.invoke(container, ["list-configs"])
+        result = runner.invoke(cli, ["container", "list-configs"])
 
         assert result.exit_code == 0
         assert "apache:" in result.output
@@ -54,7 +54,7 @@ class TestCLI:
         mock_manager.build.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["build", "-c", "apache"])
+        result = runner.invoke(cli, ["container", "build", "-c", "apache"])
 
         assert result.exit_code == 0
         assert "Success output" in result.output
@@ -73,7 +73,7 @@ class TestCLI:
         mock_manager.build.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["build", "-c", "apache", "--rebuild"])
+        result = runner.invoke(cli, ["container", "build", "-c", "apache", "--rebuild"])
 
         assert result.exit_code == 0
         mock_manager.build.assert_called_once_with(rebuild=True)
@@ -90,7 +90,7 @@ class TestCLI:
         mock_manager.build.return_value = failure_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["build", "-c", "apache"])
+        result = runner.invoke(cli, ["container", "build", "-c", "apache"])
 
         assert result.exit_code == 1
         assert "Error message" in result.output
@@ -98,7 +98,7 @@ class TestCLI:
 
     def test_build_invalid_config(self, runner: CliRunner) -> None:
         """Test build with invalid configuration."""
-        result = runner.invoke(container, ["build", "-c", "invalid"])
+        result = runner.invoke(cli, ["container", "build", "-c", "invalid"])
 
         assert result.exit_code == 1
         assert "Unknown container config 'invalid'" in result.output
@@ -115,7 +115,7 @@ class TestCLI:
         mock_manager.run.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["run", "-c", "apache"])
+        result = runner.invoke(cli, ["container", "run", "-c", "apache"])
 
         assert result.exit_code == 0
         assert "Container net-servers-apache started" in result.output
@@ -133,7 +133,9 @@ class TestCLI:
         mock_manager.run.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["run", "-c", "apache", "--interactive"])
+        result = runner.invoke(
+            cli, ["container", "run", "-c", "apache", "--interactive"]
+        )
 
         assert result.exit_code == 0
         mock_manager.run.assert_called_once_with(detached=False, port_mapping=None)
@@ -151,7 +153,7 @@ class TestCLI:
         mock_manager_class.return_value = mock_manager
 
         result = runner.invoke(
-            container, ["run", "-c", "apache", "--port-mapping", "9090:80"]
+            cli, ["container", "run", "-c", "apache", "--port-mapping", "9090:80"]
         )
 
         assert result.exit_code == 0
@@ -169,7 +171,7 @@ class TestCLI:
         mock_manager.stop.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["stop", "-c", "apache"])
+        result = runner.invoke(cli, ["container", "stop", "-c", "apache"])
 
         assert result.exit_code == 0
         assert "Container net-servers-apache stopped" in result.output
@@ -187,7 +189,7 @@ class TestCLI:
         mock_manager.remove_container.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["remove", "-c", "apache"])
+        result = runner.invoke(cli, ["container", "remove", "-c", "apache"])
 
         assert result.exit_code == 0
         assert "Container net-servers-apache removed" in result.output
@@ -205,7 +207,7 @@ class TestCLI:
         mock_manager.remove_container.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["remove", "-c", "apache", "--force"])
+        result = runner.invoke(cli, ["container", "remove", "-c", "apache", "--force"])
 
         assert result.exit_code == 0
         mock_manager.remove_container.assert_called_once_with(force=True)
@@ -222,7 +224,7 @@ class TestCLI:
         mock_manager.remove_image.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["remove-image", "-c", "apache"])
+        result = runner.invoke(cli, ["container", "remove-image", "-c", "apache"])
 
         assert result.exit_code == 0
         assert "Image net-servers-apache removed" in result.output
@@ -241,7 +243,7 @@ class TestCLI:
         mock_manager.list_containers.return_value = mock_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["list-containers"])
+        result = runner.invoke(cli, ["container", "list-containers"])
 
         assert result.exit_code == 0
         assert "test-container" in result.output
@@ -260,7 +262,7 @@ class TestCLI:
         mock_manager.list_containers.return_value = mock_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["list-containers", "--all"])
+        result = runner.invoke(cli, ["container", "list-containers", "--all"])
 
         assert result.exit_code == 0
         mock_manager.list_containers.assert_called_once_with(all_containers=True)
@@ -277,7 +279,7 @@ class TestCLI:
         mock_manager.list_containers.return_value = mock_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["list-containers"])
+        result = runner.invoke(cli, ["container", "list-containers"])
 
         assert result.exit_code == 0
         assert "invalid json" in result.output
@@ -292,7 +294,7 @@ class TestCLI:
         mock_manager.logs.return_value = mock_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["logs", "-c", "apache"])
+        result = runner.invoke(cli, ["container", "logs", "-c", "apache"])
 
         assert result.exit_code == 0
         assert "Container log output" in result.output
@@ -311,7 +313,7 @@ class TestCLI:
         mock_manager_class.return_value = mock_manager
 
         result = runner.invoke(
-            container, ["logs", "-c", "apache", "--follow", "--tail", "100"]
+            cli, ["container", "logs", "-c", "apache", "--follow", "--tail", "100"]
         )
 
         assert result.exit_code == 0
@@ -319,7 +321,7 @@ class TestCLI:
 
     def test_help_command(self, runner: CliRunner) -> None:
         """Test help command displays usage information."""
-        result = runner.invoke(container, ["--help"])
+        result = runner.invoke(cli, ["container", "--help"])
 
         assert result.exit_code == 0
         assert "Container management commands" in result.output
@@ -329,7 +331,7 @@ class TestCLI:
 
     def test_verbose_flag(self, runner: CliRunner) -> None:
         """Test verbose flag doesn't cause errors."""
-        result = runner.invoke(container, ["--verbose", "list-configs"])
+        result = runner.invoke(cli, ["--verbose", "container", "list-configs"])
 
         assert result.exit_code == 0
         assert "apache:" in result.output
@@ -347,8 +349,9 @@ class TestCLI:
         mock_manager_class.return_value = mock_manager
 
         result = runner.invoke(
-            container,
+            cli,
             [
+                "container",
                 "build",
                 "-c",
                 "apache",
@@ -378,7 +381,7 @@ class TestCLI:
         mock_manager.build.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["build-all"])
+        result = runner.invoke(cli, ["container", "build-all"])
 
         assert result.exit_code == 0
         assert "Building apache..." in result.output
@@ -403,7 +406,7 @@ class TestCLI:
         ]
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["build-all"])
+        result = runner.invoke(cli, ["container", "build-all"])
 
         assert result.exit_code == 1
         assert "Failed to build mail" in result.output
@@ -420,7 +423,7 @@ class TestCLI:
         mock_manager.run.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["start-all"])
+        result = runner.invoke(cli, ["container", "start-all"])
 
         assert result.exit_code == 0
         assert "Starting apache..." in result.output
@@ -438,7 +441,7 @@ class TestCLI:
         mock_manager.stop.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["stop-all"])
+        result = runner.invoke(cli, ["container", "stop-all"])
 
         assert result.exit_code == 0
         assert "Stopping apache..." in result.output
@@ -456,7 +459,7 @@ class TestCLI:
         mock_manager.remove_container.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["remove-all", "-f"])
+        result = runner.invoke(cli, ["container", "remove-all", "-f"])
 
         assert result.exit_code == 0
         assert "Removing container apache..." in result.output
@@ -474,7 +477,7 @@ class TestCLI:
         mock_manager.remove_image.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["remove-all-images", "-f"])
+        result = runner.invoke(cli, ["container", "remove-all-images", "-f"])
 
         assert result.exit_code == 0
         assert "Removing image apache..." in result.output
@@ -494,7 +497,7 @@ class TestCLI:
         mock_manager.remove_image.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(container, ["clean-all", "-f"])
+        result = runner.invoke(cli, ["container", "clean-all", "-f"])
 
         assert result.exit_code == 0
         assert "Cleaning all containers and images..." in result.output
@@ -508,7 +511,7 @@ class TestCLI:
         runner = CliRunner()
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = FileNotFoundError()
-            result = runner.invoke(container, ["test"])
+            result = runner.invoke(cli, ["container", "test"])
 
         assert result.exit_code == 1
         assert "pytest is required" in result.output

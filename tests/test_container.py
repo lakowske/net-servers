@@ -9,8 +9,43 @@ from net_servers.actions.container import (
     ContainerConfig,
     ContainerManager,
     ContainerResult,
+    VolumeMount,
 )
 from net_servers.config.containers import get_container_config
+
+
+class TestVolumeMount:
+    """Test VolumeMount dataclass."""
+
+    def test_volume_mount_defaults(self) -> None:
+        """Test VolumeMount with default read-write."""
+        volume = VolumeMount(host_path="/host/path", container_path="/container/path")
+
+        assert volume.host_path == "/host/path"
+        assert volume.container_path == "/container/path"
+        assert not volume.read_only
+
+    def test_volume_mount_read_only(self) -> None:
+        """Test VolumeMount with read-only flag."""
+        volume = VolumeMount(
+            host_path="/host/path", container_path="/container/path", read_only=True
+        )
+
+        assert volume.read_only
+
+    def test_to_podman_arg_read_write(self) -> None:
+        """Test converting to podman argument format for read-write."""
+        volume = VolumeMount(host_path="/host/path", container_path="/container/path")
+
+        assert volume.to_podman_arg() == "/host/path:/container/path"
+
+    def test_to_podman_arg_read_only(self) -> None:
+        """Test converting to podman argument format for read-only."""
+        volume = VolumeMount(
+            host_path="/host/path", container_path="/container/path", read_only=True
+        )
+
+        assert volume.to_podman_arg() == "/host/path:/container/path:ro"
 
 
 class TestContainerConfig:
@@ -24,6 +59,10 @@ class TestContainerConfig:
         assert config.dockerfile == "Dockerfile"
         assert config.port == 8080
         assert config.container_name == "test-image"
+        assert config.volumes == []
+        assert config.environment == {}
+        assert config.config_templates == {}
+        assert config.state_paths == []
 
     def test_container_config_with_registry(self) -> None:
         """Test container name generation from image with registry."""
@@ -36,6 +75,21 @@ class TestContainerConfig:
         config = ContainerConfig(image_name="test-image", container_name="custom-name")
 
         assert config.container_name == "custom-name"
+
+    def test_container_config_with_volumes(self) -> None:
+        """Test ContainerConfig with volumes."""
+        volumes = [VolumeMount("/host", "/container")]
+        config = ContainerConfig(image_name="test-image", volumes=volumes)
+
+        assert len(config.volumes) == 1
+        assert config.volumes[0].host_path == "/host"
+
+    def test_container_config_with_environment(self) -> None:
+        """Test ContainerConfig with environment variables."""
+        env = {"VAR1": "value1", "VAR2": "value2"}
+        config = ContainerConfig(image_name="test-image", environment=env)
+
+        assert config.environment == env
 
 
 class TestContainerResult:
@@ -195,6 +249,75 @@ class TestContainerManager:
             "-d",
             "-p",
             "8080:80",
+            "--name",
+            "test-container",
+            "test-image",
+        ]
+        mock_run.assert_called_once_with(
+            expected_cmd, capture_output=True, text=True, timeout=300
+        )
+
+    @patch("subprocess.run")
+    def test_run_container_with_volumes(self, mock_run: Mock) -> None:
+        """Test running container with volume mounts."""
+        volumes = [
+            VolumeMount("/host/config", "/container/config"),
+            VolumeMount("/host/data", "/container/data", read_only=True),
+        ]
+        config = ContainerConfig(
+            image_name="test-image",
+            container_name="test-container",
+            volumes=volumes,
+        )
+        manager = ContainerManager(config)
+        mock_run.return_value = Mock(returncode=0, stdout="container_id_123", stderr="")
+
+        result = manager.run()
+
+        assert result.success
+        expected_cmd = [
+            "podman",
+            "run",
+            "-d",
+            "-p",
+            "8080:80",
+            "-v",
+            "/host/config:/container/config",
+            "-v",
+            "/host/data:/container/data:ro",
+            "--name",
+            "test-container",
+            "test-image",
+        ]
+        mock_run.assert_called_once_with(
+            expected_cmd, capture_output=True, text=True, timeout=300
+        )
+
+    @patch("subprocess.run")
+    def test_run_container_with_environment(self, mock_run: Mock) -> None:
+        """Test running container with environment variables."""
+        env = {"VAR1": "value1", "VAR2": "value2"}
+        config = ContainerConfig(
+            image_name="test-image",
+            container_name="test-container",
+            environment=env,
+        )
+        manager = ContainerManager(config)
+        mock_run.return_value = Mock(returncode=0, stdout="container_id_123", stderr="")
+
+        result = manager.run()
+
+        assert result.success
+        expected_cmd = [
+            "podman",
+            "run",
+            "-d",
+            "-p",
+            "8080:80",
+            "-e",
+            "VAR1=value1",
+            "-e",
+            "VAR2=value2",
             "--name",
             "test-container",
             "test-image",
@@ -425,7 +548,7 @@ class TestContainerConfigs:
 
     def test_get_apache_config(self) -> None:
         """Test getting Apache configuration."""
-        config = get_container_config("apache")
+        config = get_container_config("apache", use_config_manager=False)
 
         assert config.image_name == "net-servers-apache"
         assert config.dockerfile == "docker/apache/Dockerfile"
@@ -434,7 +557,7 @@ class TestContainerConfigs:
 
     def test_get_mail_config(self) -> None:
         """Test getting mail configuration."""
-        config = get_container_config("mail")
+        config = get_container_config("mail", use_config_manager=False)
 
         assert config.image_name == "net-servers-mail"
         assert config.dockerfile == "docker/mail/Dockerfile"
@@ -443,7 +566,7 @@ class TestContainerConfigs:
 
     def test_get_dns_config(self) -> None:
         """Test getting DNS configuration."""
-        config = get_container_config("dns")
+        config = get_container_config("dns", use_config_manager=False)
 
         assert config.image_name == "net-servers-dns"
         assert config.dockerfile == "docker/dns/Dockerfile"
@@ -454,3 +577,22 @@ class TestContainerConfigs:
         """Test getting unknown configuration raises error."""
         with pytest.raises(ValueError, match="Unknown container config 'unknown'"):
             get_container_config("unknown")
+
+    def test_get_config_with_config_manager_error_handling(self) -> None:
+        """Test getting config with config manager error handling."""
+        from unittest.mock import patch
+
+        # Mock ConfigurationManager to raise an exception
+        with patch(
+            "net_servers.config.containers.ConfigurationManager"
+        ) as mock_manager:
+            mock_manager.side_effect = PermissionError("No permission")
+
+            # Should still return basic config when config manager fails
+            config = get_container_config("apache", use_config_manager=True)
+
+            assert config.image_name == "net-servers-apache"
+            assert config.dockerfile == "docker/apache/Dockerfile"
+            # Should not have enhanced volumes/environment
+            assert len(config.volumes) == 0
+            assert len(config.environment) == 0

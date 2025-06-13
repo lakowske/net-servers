@@ -4,6 +4,8 @@ from typing import Dict
 
 from net_servers.actions.container import ContainerConfig
 
+from .manager import ConfigurationManager
+
 # Predefined container configurations
 CONTAINER_CONFIGS: Dict[str, ContainerConfig] = {
     "apache": ContainerConfig(
@@ -27,20 +29,35 @@ CONTAINER_CONFIGS: Dict[str, ContainerConfig] = {
 }
 
 
-def get_container_config(name: str) -> ContainerConfig:
-    """Get container configuration by name."""
+def get_container_config(
+    name: str, development_mode: bool = True, use_config_manager: bool = True
+) -> ContainerConfig:
+    """Get container configuration by name with enhanced configuration."""
     if name not in CONTAINER_CONFIGS:
         available = ", ".join(CONTAINER_CONFIGS.keys())
         raise ValueError(f"Unknown container config '{name}'. Available: {available}")
 
     # Return a copy to avoid mutating the original config
     original = CONTAINER_CONFIGS[name]
-    return ContainerConfig(
+    config = ContainerConfig(
         image_name=original.image_name,
         dockerfile=original.dockerfile,
         port=original.port,
         container_name=original.container_name or "",
     )
+
+    # Enhance with configuration management if enabled
+    if use_config_manager:
+        try:
+            config_manager = ConfigurationManager()
+            config = config_manager.enhance_container_config(
+                config, name, development_mode
+            )
+        except (ImportError, PermissionError, OSError):
+            # If config system not available or fails, return basic config
+            pass
+
+    return config
 
 
 def list_container_configs() -> Dict[str, ContainerConfig]:

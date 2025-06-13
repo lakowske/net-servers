@@ -8,6 +8,7 @@ from typing import Optional
 import click
 
 from net_servers.actions.container import ContainerManager
+from net_servers.cli_config import config
 from net_servers.config.containers import get_container_config, list_container_configs
 
 
@@ -21,9 +22,15 @@ def setup_logging(verbose: bool = False) -> None:
 
 @click.group()
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
-def container(verbose: bool) -> None:
-    """Container management commands."""
+def cli(verbose: bool) -> None:
+    """Net-servers management commands."""
     setup_logging(verbose)
+
+
+@cli.group()
+def container() -> None:
+    """Container management commands."""
+    pass
 
 
 @container.command()
@@ -36,7 +43,7 @@ def build(
 ) -> None:
     """Build container image."""
     try:
-        container_config = get_container_config(config)
+        container_config = get_container_config(config, use_config_manager=False)
 
         # Apply overrides
         if image_name:
@@ -73,7 +80,7 @@ def run(
 ) -> None:
     """Run container."""
     try:
-        container_config = get_container_config(config)
+        container_config = get_container_config(config, use_config_manager=False)
 
         # Apply port override
         if port:
@@ -104,7 +111,7 @@ def run(
 def stop(config: str) -> None:
     """Stop running container."""
     try:
-        container_config = get_container_config(config)
+        container_config = get_container_config(config, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.stop()
 
@@ -130,7 +137,7 @@ def stop(config: str) -> None:
 def remove(config: str, force: bool) -> None:
     """Remove container."""
     try:
-        container_config = get_container_config(config)
+        container_config = get_container_config(config, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
 
@@ -156,7 +163,7 @@ def remove(config: str, force: bool) -> None:
 def remove_image(config: str, force: bool) -> None:
     """Remove container image."""
     try:
-        container_config = get_container_config(config)
+        container_config = get_container_config(config, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.remove_image(force=force)
 
@@ -210,7 +217,7 @@ def list_containers(all: bool) -> None:
 def logs(config: str, follow: bool, tail: Optional[int]) -> None:
     """Show container logs."""
     try:
-        container_config = get_container_config(config)
+        container_config = get_container_config(config, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.logs(follow=follow, tail=tail)
 
@@ -235,9 +242,9 @@ def build_all(rebuild: bool) -> None:
     configs = list_container_configs()
     failed = []
 
-    for name, config in configs.items():
+    for name, container_config in configs.items():
         click.echo(f"Building {name}...")
-        manager = ContainerManager(config)
+        manager = ContainerManager(container_config)
         result = manager.build(rebuild=rebuild)
 
         if result.stdout:
@@ -249,7 +256,7 @@ def build_all(rebuild: bool) -> None:
             failed.append(name)
             click.echo(f"Failed to build {name}", err=True)
         else:
-            click.echo(f"Successfully built {config.image_name}")
+            click.echo(f"Successfully built {container_config.image_name}")
 
     if failed:
         click.echo(f"Failed to build: {', '.join(failed)}", err=True)
@@ -263,9 +270,9 @@ def start_all(detached: bool) -> None:
     configs = list_container_configs()
     failed = []
 
-    for name, config in configs.items():
+    for name, container_config in configs.items():
         click.echo(f"Starting {name}...")
-        manager = ContainerManager(config)
+        manager = ContainerManager(container_config)
         result = manager.run(detached=detached)
 
         if result.stdout:
@@ -277,7 +284,7 @@ def start_all(detached: bool) -> None:
             failed.append(name)
             click.echo(f"Failed to start {name}", err=True)
         else:
-            click.echo(f"Container {config.container_name} started")
+            click.echo(f"Container {container_config.container_name} started")
 
     if failed:
         click.echo(f"Failed to start: {', '.join(failed)}", err=True)
@@ -290,9 +297,9 @@ def stop_all() -> None:
     configs = list_container_configs()
     failed = []
 
-    for name, config in configs.items():
+    for name, container_config in configs.items():
         click.echo(f"Stopping {name}...")
-        manager = ContainerManager(config)
+        manager = ContainerManager(container_config)
         result = manager.stop()
 
         if result.stdout:
@@ -304,7 +311,7 @@ def stop_all() -> None:
             failed.append(name)
             click.echo(f"Failed to stop {name}", err=True)
         else:
-            click.echo(f"Container {config.container_name} stopped")
+            click.echo(f"Container {container_config.container_name} stopped")
 
     if failed:
         click.echo(f"Failed to stop: {', '.join(failed)}", err=True)
@@ -317,9 +324,9 @@ def remove_all(force: bool) -> None:
     configs = list_container_configs()
     failed = []
 
-    for name, config in configs.items():
+    for name, container_config in configs.items():
         click.echo(f"Removing container {name}...")
-        manager = ContainerManager(config)
+        manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
 
         if result.stdout:
@@ -331,7 +338,7 @@ def remove_all(force: bool) -> None:
             failed.append(name)
             click.echo(f"Failed to remove container {name}", err=True)
         else:
-            click.echo(f"Container {config.container_name} removed")
+            click.echo(f"Container {container_config.container_name} removed")
 
     if failed:
         click.echo(f"Failed to remove containers: {', '.join(failed)}", err=True)
@@ -344,9 +351,9 @@ def remove_all_images(force: bool) -> None:
     configs = list_container_configs()
     failed = []
 
-    for name, config in configs.items():
+    for name, container_config in configs.items():
         click.echo(f"Removing image {name}...")
-        manager = ContainerManager(config)
+        manager = ContainerManager(container_config)
         result = manager.remove_image(force=force)
 
         if result.stdout:
@@ -358,7 +365,7 @@ def remove_all_images(force: bool) -> None:
             failed.append(name)
             click.echo(f"Failed to remove image {name}", err=True)
         else:
-            click.echo(f"Image {config.image_name} removed")
+            click.echo(f"Image {container_config.image_name} removed")
 
     if failed:
         click.echo(f"Failed to remove images: {', '.join(failed)}", err=True)
@@ -373,27 +380,27 @@ def clean_all(force: bool) -> None:
     # Stop all containers first
     click.echo("Stopping all containers...")
     configs = list_container_configs()
-    for config in configs.values():
-        manager = ContainerManager(config)
+    for container_config in configs.values():
+        manager = ContainerManager(container_config)
         result = manager.stop()
         if result.success:
-            click.echo(f"Stopped {config.container_name}")
+            click.echo(f"Stopped {container_config.container_name}")
 
     # Remove all containers
     click.echo("Removing all containers...")
-    for config in configs.values():
-        manager = ContainerManager(config)
+    for container_config in configs.values():
+        manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
         if result.success:
-            click.echo(f"Removed container {config.container_name}")
+            click.echo(f"Removed container {container_config.container_name}")
 
     # Remove all images
     click.echo("Removing all images...")
-    for config in configs.values():
-        manager = ContainerManager(config)
+    for container_config in configs.values():
+        manager = ContainerManager(container_config)
         result = manager.remove_image(force=force)
         if result.success:
-            click.echo(f"Removed image {config.image_name}")
+            click.echo(f"Removed image {container_config.image_name}")
 
     click.echo("Clean complete!")
 
@@ -404,12 +411,12 @@ def list_configs() -> None:
     configs = list_container_configs()
 
     click.echo("Available container configurations:")
-    for name, config in configs.items():
+    for name, container_config in configs.items():
         click.echo(f"  {name}" + ":")
-        click.echo(f"    image: {config.image_name}")
-        click.echo(f"    dockerfile: {config.dockerfile}")
-        click.echo(f"    port: {config.port}")
-        click.echo(f"    container_name: {config.container_name}")
+        click.echo(f"    image: {container_config.image_name}")
+        click.echo(f"    dockerfile: {container_config.dockerfile}")
+        click.echo(f"    port: {container_config.port}")
+        click.echo(f"    container_name: {container_config.container_name}")
 
 
 @container.command("test")
@@ -458,7 +465,7 @@ def test_integration(config: Optional[str], verbose: bool, build: bool) -> None:
         click.echo("Building containers before testing...")
         if config:
             # Build specific container
-            container_config = get_container_config(config)
+            container_config = get_container_config(config, use_config_manager=False)
             manager = ContainerManager(container_config)
             result = manager.build()
             if not result.success:
@@ -496,5 +503,9 @@ def test_integration(config: Optional[str], verbose: bool, build: bool) -> None:
     sys.exit(result.returncode)
 
 
+# Add configuration commands to main CLI
+cli.add_command(config)
+
+
 if __name__ == "__main__":
-    container()
+    cli()
