@@ -58,7 +58,12 @@ def user() -> None:
 @click.option("--quota", "-q", default="500M", help="Mailbox quota")
 @click.option("--base-path", default="/data", help="Configuration base path")
 def add_user(
-    username: str, email: str, domain: tuple, role: tuple, quota: str, base_path: str
+    username: str,
+    email: str,
+    domain: tuple,
+    role: tuple,
+    quota: str,
+    base_path: str,
 ) -> None:
     """Add a new user to the system."""
     try:
@@ -250,7 +255,7 @@ def validate(base_path: str) -> None:
                 all_valid = False
                 click.echo(f"✗ {service} validation failed" + ":")
                 for error in errors:
-                    click.echo(f"  - {error}")
+                    click.echo("  - " + f"{error}")
             else:
                 click.echo(f"✓ {service} configuration is valid")
 

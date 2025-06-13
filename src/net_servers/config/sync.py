@@ -490,7 +490,9 @@ class ConfigurationSyncManager:
                     break
 
             if not user_to_delete:
-                self.logger.warning(f"User {username} not found in configuration")
+                self.logger.warning(
+                    f"User {username} not found in configuration"  # noqa: E713
+                )
                 return False
 
             current_users.users.remove(user_to_delete)
