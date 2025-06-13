@@ -37,7 +37,7 @@ clean-python/
 ├── .pre-commit-config.yaml  # Pre-commit hook configuration
 ├── .flake8          # Flake8 linting configuration
 ├── setup.cfg        # Project metadata and configuration
-└── requirements.txt # Project dependencies
+└── pyproject.toml   # Modern Python project configuration and dependencies
 ```
 
 ## Development Commands
@@ -46,6 +46,221 @@ clean-python/
 - `flake8` - Run linting
 - `pre-commit install` - Install pre-commit hooks
 - `pre-commit run --all-files` - Run all pre-commit checks
+
+## CLI Interface
+
+This project provides a comprehensive CLI for managing containerized network services.
+
+### Main CLI Structure
+```bash
+python -m net_servers.cli [OPTIONS] COMMAND [ARGS]...
+```
+
+### Available Commands
+
+#### Container Management
+```bash
+# List available container configurations
+python -m net_servers.cli container list-configs
+
+# Build container images
+python -m net_servers.cli container build -c apache
+python -m net_servers.cli container build-all
+
+# Run containers
+python -m net_servers.cli container run -c apache --port-mapping 8080:80
+python -m net_servers.cli container run -c mail
+python -m net_servers.cli container run -c dns --port-mapping 5353:53
+
+# Container lifecycle management
+python -m net_servers.cli container start-all
+python -m net_servers.cli container stop -c apache
+python -m net_servers.cli container stop-all
+python -m net_servers.cli container remove -c apache
+python -m net_servers.cli container remove-all
+python -m net_servers.cli container clean-all
+
+# Container inspection
+python -m net_servers.cli container list-containers
+python -m net_servers.cli container logs -c apache
+
+# Integration testing
+python -m net_servers.cli container test -c apache
+```
+
+#### Configuration Management
+```bash
+# Initialize configuration system
+python -m net_servers.cli config init
+
+# Validate configurations
+python -m net_servers.cli config validate
+
+# Sync configurations to services
+python -m net_servers.cli config sync
+
+# User management
+python -m net_servers.cli config user add --username admin --email admin@local.dev
+python -m net_servers.cli config user list
+python -m net_servers.cli config user delete --username admin
+
+# Domain management
+python -m net_servers.cli config domain add --name local.dev --a-record mail:172.20.0.10
+python -m net_servers.cli config domain list
+
+# Utility commands
+python -m net_servers.cli config test-email --to admin@local.dev --subject "Test"
+python -m net_servers.cli config daemon --interval 5
+```
+
+### Container Services
+
+#### Apache HTTP Server
+- **Purpose**: Development web server
+- **Default Port**: 8080 (mapped to container port 80)
+- **Access**: http://localhost:8080
+- **Configuration**: `docker/apache/config/`
+
+#### Mail Server (Postfix + Dovecot)
+- **Purpose**: SMTP/IMAP/POP3 email services
+- **Ports**: 25 (SMTP), 143 (IMAP), 110 (POP3), 587 (SMTP-TLS), 993 (IMAPS), 995 (POP3S)
+- **Configuration**: Multi-service container with Supervisor
+- **Authentication**: Custom user management system
+
+#### DNS Server (BIND9)
+- **Purpose**: Local DNS resolution and zone management
+- **Default Port**: 53 (use 5353 on macOS to avoid conflicts)
+- **Configuration**: Dynamic zone file generation
+- **Usage**: Custom domain resolution for development
+
+## macOS Setup Guide
+
+This section addresses common infrastructure issues that new macOS users might encounter when setting up the project.
+
+### Prerequisites
+
+1. **Podman Installation**
+   ```bash
+   brew install podman
+   podman machine init
+   podman machine start
+   ```
+
+2. **Python Environment**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -e ".[dev]"
+   ```
+
+3. **Pre-commit Setup**
+   ```bash
+   pre-commit install
+   ```
+
+### Common macOS Issues and Solutions
+
+#### 1. DNS Port 53 Conflicts
+**Issue**: DNS container fails with "port 53 already in use"
+**Cause**: macOS runs mDNSResponder on port 53
+**Solution**: Use alternative port mapping
+```bash
+# Instead of default port 53
+python -m net_servers.cli container run -c dns --port-mapping 5353:53
+
+# Test DNS resolution
+dig @127.0.0.1 -p 5353 local.dev
+```
+
+#### 2. Container Build Requirements
+**Issue**: Integration tests fail because container images don't exist
+**Solution**: Build containers before running tests
+```bash
+# Build all containers
+python -m net_servers.cli container build-all
+
+# Or build individually
+python -m net_servers.cli container build -c apache
+python -m net_servers.cli container build -c mail
+python -m net_servers.cli container build -c dns
+```
+
+#### 3. Container Name Conflicts
+**Issue**: "Container name already in use" errors
+**Solution**: Clean up existing containers
+```bash
+# Stop all containers
+python -m net_servers.cli container stop-all
+
+# Remove specific container
+python -m net_servers.cli container remove -c dns
+
+# Complete cleanup
+python -m net_servers.cli container clean-all
+```
+
+#### 4. Port Accessibility Testing
+**Quick connectivity tests:**
+```bash
+# Test Apache (HTTP)
+curl -f http://localhost:8080
+
+# Test Mail (SMTP)
+nc -z localhost 25
+
+# Test DNS (custom port)
+dig @127.0.0.1 -p 5353 local.dev
+```
+
+### Integration Testing on macOS
+
+#### Running Tests Successfully
+1. **Build containers first**: `python -m net_servers.cli container build-all`
+2. **Clean up existing containers**: `python -m net_servers.cli container clean-all`
+3. **Run tests with proper ports**: Tests automatically handle port conflicts
+
+#### Expected Test Results
+- ✅ **Unit tests**: All 196+ tests should pass
+- ✅ **Basic container functionality**: Container startup and basic connectivity
+- ⚠️ **DNS resolution tests**: May fail due to system resolver conflicts (expected)
+- ✅ **Apache/Mail services**: Should work properly with port mapping
+
+#### Troubleshooting Failed Tests
+```bash
+# Check container logs
+python -m net_servers.cli container logs -c mail
+
+# Verify container status
+python -m net_servers.cli container list-containers
+
+# Test individual services
+python -m net_servers.cli container test -c apache
+```
+
+### Development Workflow on macOS
+
+1. **Initial Setup**
+   ```bash
+   git clone <repo>
+   cd net-servers
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -e ".[dev]"
+   pre-commit install
+   ```
+
+2. **Build and Test**
+   ```bash
+   python -m net_servers.cli container build-all
+   pytest tests/test_*.py  # Run unit tests
+   python -m net_servers.cli container run -c apache --port-mapping 8080:80
+   ```
+
+3. **Clean Development Environment**
+   ```bash
+   python -m net_servers.cli container clean-all
+   pre-commit run --all-files
+   ```
 
 ## Quality Gates
 Every commit must pass:
