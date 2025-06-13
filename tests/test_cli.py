@@ -115,7 +115,9 @@ class TestCLI:
         mock_manager.run.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(cli, ["container", "run", "-c", "apache"])
+        result = runner.invoke(
+            cli, ["container", "run", "-c", "apache", "--production"]
+        )
 
         assert result.exit_code == 0
         assert "Container net-servers-apache started" in result.output
@@ -171,7 +173,9 @@ class TestCLI:
         mock_manager.stop.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(cli, ["container", "stop", "-c", "apache"])
+        result = runner.invoke(
+            cli, ["container", "stop", "-c", "apache", "--production"]
+        )
 
         assert result.exit_code == 0
         assert "Container net-servers-apache stopped" in result.output
@@ -189,7 +193,9 @@ class TestCLI:
         mock_manager.remove_container.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(cli, ["container", "remove", "-c", "apache"])
+        result = runner.invoke(
+            cli, ["container", "remove", "-c", "apache", "--production"]
+        )
 
         assert result.exit_code == 0
         assert "Container net-servers-apache removed" in result.output
@@ -224,7 +230,9 @@ class TestCLI:
         mock_manager.remove_image.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(cli, ["container", "remove-image", "-c", "apache"])
+        result = runner.invoke(
+            cli, ["container", "remove-image", "-c", "apache", "--production"]
+        )
 
         assert result.exit_code == 0
         assert "Image net-servers-apache removed" in result.output

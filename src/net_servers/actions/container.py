@@ -32,13 +32,27 @@ class ContainerResult:
 
 
 @dataclass
+class PortMapping:
+    """Configuration for port mapping."""
+
+    host_port: int
+    container_port: int
+    protocol: str = "tcp"
+
+    def to_podman_arg(self) -> str:
+        """Convert to podman port argument format."""
+        return f"{self.host_port}" + ":" + f"{self.container_port}/{self.protocol}"
+
+
+@dataclass
 class ContainerConfig:
     """Configuration for container operations."""
 
     image_name: str
     dockerfile: str = "Dockerfile"
-    port: int = 8080
+    port: int = 8080  # Primary port for backward compatibility
     container_name: str = ""
+    port_mappings: List[PortMapping] = field(default_factory=list)
     volumes: List[VolumeMount] = field(default_factory=list)
     environment: Dict[str, str] = field(default_factory=dict)
     config_templates: Dict[str, str] = field(default_factory=dict)
@@ -120,16 +134,20 @@ class ContainerManager:
         if detached:
             cmd.append("-d")
 
-        # Use provided port mapping or default based on container type
+        # Use provided port mapping or configured port mappings
         if port_mapping:
             cmd.extend(["-p", port_mapping])
+        elif self.config.port_mappings:
+            # Use configured port mappings
+            for mapping in self.config.port_mappings:
+                cmd.extend(["-p", mapping.to_podman_arg()])
         else:
-            # Default port mappings based on service type
+            # Fallback to legacy single port mapping
             if "apache" in self.config.image_name:
                 port_mapping = f"{self.config.port}" + ":80"
                 cmd.extend(["-p", port_mapping])
             elif "mail" in self.config.image_name:
-                # Map multiple ports for mail service
+                # Map multiple ports for mail service (legacy fallback)
                 cmd.extend(["-p", "25:25"])  # SMTP
                 cmd.extend(["-p", "143:143"])  # IMAP
                 cmd.extend(["-p", "110:110"])  # POP3

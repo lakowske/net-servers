@@ -548,16 +548,20 @@ class TestContainerConfigs:
 
     def test_get_apache_config(self) -> None:
         """Test getting Apache configuration."""
-        config = get_container_config("apache", use_config_manager=False)
+        config = get_container_config(
+            "apache", use_config_manager=False, production_mode=True
+        )
 
         assert config.image_name == "net-servers-apache"
         assert config.dockerfile == "docker/apache/Dockerfile"
-        assert config.port == 8080
+        assert config.port == 80
         assert config.container_name == "net-servers-apache"
 
     def test_get_mail_config(self) -> None:
         """Test getting mail configuration."""
-        config = get_container_config("mail", use_config_manager=False)
+        config = get_container_config(
+            "mail", use_config_manager=False, production_mode=True
+        )
 
         assert config.image_name == "net-servers-mail"
         assert config.dockerfile == "docker/mail/Dockerfile"
@@ -566,7 +570,9 @@ class TestContainerConfigs:
 
     def test_get_dns_config(self) -> None:
         """Test getting DNS configuration."""
-        config = get_container_config("dns", use_config_manager=False)
+        config = get_container_config(
+            "dns", use_config_manager=False, production_mode=True
+        )
 
         assert config.image_name == "net-servers-dns"
         assert config.dockerfile == "docker/dns/Dockerfile"
