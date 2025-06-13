@@ -10,12 +10,15 @@ import pytest
 from net_servers.actions.container import ContainerManager
 from net_servers.config.containers import get_container_config
 
+from .port_manager import get_port_manager
+
 
 @pytest.fixture(scope="session")
 def dns_container():
     """Build and run DNS container for testing session."""
     config = get_container_config("dns")
     manager = ContainerManager(config)
+    port_manager = get_port_manager()
 
     # Clean up any existing container first
     print("Cleaning up existing DNS container...")
@@ -27,9 +30,12 @@ def dns_container():
     build_result = manager.build()
     assert build_result.success, f"DNS container build failed: {build_result.stderr}"
 
-    # Start the container on a different port for testing (port 53 is usually taken)
-    print("Starting DNS container...")
-    run_result = manager.run(port_mapping="5354:53")
+    # Get dynamic port mapping for DNS
+    port_mapping = port_manager.get_port_mapping_string("dns")
+
+    # Start the container with dynamic port mapping
+    print(f"Starting DNS container with port mapping: {port_mapping}")
+    run_result = manager.run(port_mapping=port_mapping)
     assert run_result.success, f"DNS container start failed: {run_result.stderr}"
 
     # Wait for DNS service to be ready
@@ -46,10 +52,17 @@ def run_dig_query(
     query_type: str,
     domain: str,
     server: str = "127.0.0.1",
-    port: int = 5354,
+    port: int = None,
     timeout: int = 2,
 ) -> Dict[str, Any]:
     """Run a dig query and return parsed results."""
+    # Get the DNS port from the port manager if not provided
+    if port is None:
+        try:
+            port = get_port_manager().get_host_port("dns", 53)
+        except KeyError:
+            port = 5354  # Fallback to default test port
+
     cmd = [
         "dig",
         f"@{server}",
@@ -86,15 +99,21 @@ def test_container_startup(dns_container):
 
 
 def test_dns_port_accessible(dns_container):
-    """Test that DNS port 5354 is accessible."""
+    """Test that DNS port is accessible."""
+    # Get the dynamic DNS port
+    try:
+        dns_port = get_port_manager().get_host_port("dns", 53)
+    except KeyError:
+        dns_port = 5354  # Fallback
+
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(2)
         # Try to connect to DNS port
-        result = sock.connect_ex(("127.0.0.1", 5354))
+        result = sock.connect_ex(("127.0.0.1", dns_port))
         sock.close()
         # Connection should succeed (return 0) or be refused (connection established)
-        assert result == 0, f"Cannot connect to DNS port 5354: {result}"
+        assert result == 0, f"Cannot connect to DNS port {dns_port}: {result}"
     except Exception as e:
         pytest.fail(f"DNS port accessibility test failed: {e}")
 

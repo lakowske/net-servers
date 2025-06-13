@@ -31,7 +31,7 @@ class TestMailContainer:
 
     def test_03_smtp_basic_communication(self, mail_container: ContainerTestHelper):
         """Test SMTP service responds (port accessible and functional)."""
-        port = 25025
+        port = mail_container.get_container_port(25)
 
         with smtplib.SMTP("localhost", port, timeout=2) as smtp:
             response = smtp.noop()
@@ -39,7 +39,7 @@ class TestMailContainer:
 
     def test_04_imap_basic_communication(self, mail_container: ContainerTestHelper):
         """Test IMAP service responds (port accessible and functional)."""
-        port = 25143
+        port = mail_container.get_container_port(143)
 
         # Just connect to prove service is running
         with imaplib.IMAP4("localhost", port):
@@ -48,7 +48,7 @@ class TestMailContainer:
 
     def test_05_pop3_basic_communication(self, mail_container: ContainerTestHelper):
         """Test POP3 service responds (port accessible and functional)."""
-        port = 25110
+        port = mail_container.get_container_port(110)
 
         # Just connect to prove service is running
         pop = poplib.POP3("localhost", port, timeout=2)
@@ -74,7 +74,7 @@ class TestMailContainer:
 
     def test_07_imap_authentication(self, mail_container: ContainerTestHelper):
         """Test IMAP authentication with test user credentials."""
-        port = 25143
+        port = mail_container.get_container_port(143)
 
         with imaplib.IMAP4("localhost", port) as imap:
             result = imap.login("test@local", "password")
@@ -82,7 +82,7 @@ class TestMailContainer:
 
     def test_08_pop3_authentication(self, mail_container: ContainerTestHelper):
         """Test POP3 authentication with test user credentials."""
-        port = 25110
+        port = mail_container.get_container_port(110)
 
         pop = poplib.POP3("localhost", port, timeout=2)
         try:
@@ -97,7 +97,7 @@ class TestMailContainer:
 
     def test_09_smtp_send_email(self, mail_container: ContainerTestHelper):
         """Test sending an email via SMTP."""
-        port = 25025
+        port = mail_container.get_container_port(25)
 
         msg = MIMEText("This is a test email from integration test.")
         msg["Subject"] = "Integration Test Email"
@@ -109,8 +109,8 @@ class TestMailContainer:
 
     def test_10_email_delivery_workflow(self, mail_container: ContainerTestHelper):
         """Test complete email delivery workflow: send via SMTP, receive via IMAP."""
-        smtp_port = 25025
-        imap_port = 25143
+        smtp_port = mail_container.get_container_port(25)
+        imap_port = mail_container.get_container_port(143)
 
         # Send email
         test_subject = "Integration Test Workflow Email"

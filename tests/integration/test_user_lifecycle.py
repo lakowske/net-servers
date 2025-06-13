@@ -20,6 +20,8 @@ from net_servers.config.sync import (
     MailServiceSynchronizer,
 )
 
+from .port_manager import get_port_manager
+
 
 @pytest.fixture(scope="session")
 def temp_config_dir() -> Generator[Path, None, None]:
@@ -54,7 +56,10 @@ def mail_container_manager(
         build_result.success
     ), f"Failed to build mail container: {build_result.stderr}"
 
-    run_result = manager.run()
+    # Get dynamic port mapping for mail service
+    port_mapping = get_port_manager().get_port_mapping_string("mail")
+
+    run_result = manager.run(port_mapping=port_mapping)
     assert run_result.success, f"Failed to start mail container: {run_result.stderr}"
 
     # Wait for services to start
@@ -81,7 +86,10 @@ def dns_container_manager(
     build_result = manager.build()
     assert build_result.success, f"Failed to build DNS container: {build_result.stderr}"
 
-    run_result = manager.run()
+    # Get dynamic port mapping for DNS service
+    port_mapping = get_port_manager().get_port_mapping_string("dns")
+
+    run_result = manager.run(port_mapping=port_mapping)
     assert run_result.success, f"Failed to start DNS container: {run_result.stderr}"
 
     # Wait for services to start
@@ -291,8 +299,9 @@ class TestUserLifecycle:
             msg["From"] = "admin@local.dev"
             msg["To"] = to_email
 
-            # Send via SMTP (using localhost:25 where mail container is running)
-            with smtplib.SMTP("localhost", 25) as smtp:
+            # Send via SMTP using dynamic port allocation
+            smtp_port = get_port_manager().get_host_port("mail", 25)
+            with smtplib.SMTP("localhost", smtp_port) as smtp:
                 smtp.send_message(msg)
 
             return True
@@ -306,9 +315,9 @@ class TestUserLifecycle:
     ) -> bool:
         """Check if email was received via POP3."""
         try:
-            # Connect to POP3 server (using localhost:110 where mail container
-            # is running)
-            pop = poplib.POP3("localhost", 110)
+            # Connect to POP3 server using dynamic port allocation
+            pop3_port = get_port_manager().get_host_port("mail", 110)
+            pop = poplib.POP3("localhost", pop3_port)
             try:
                 pop.user(username)
                 pop.pass_(password)

@@ -1,16 +1,16 @@
 options {
     directory "/var/cache/bind";
 
-    // Enable recursion for local network
+    // Enable recursion for local network and any (for development)
     recursion yes;
-    allow-recursion { localnets; localhost; };
+    allow-recursion { any; };
 
     // Listen on all interfaces
     listen-on port 53 { any; };
     listen-on-v6 port 53 { any; };
 
-    // Allow queries from local networks
-    allow-query { localnets; localhost; };
+    // Allow queries from local networks and any (for development)
+    allow-query { any; };
 
     // Forwarders for external DNS resolution
     forwarders {

@@ -30,7 +30,9 @@
             "label": "Format Code (Black)",
             "type": "shell",
             "command": "black",
-            "args": ["."],
+            "args": [
+                "."
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -61,7 +63,10 @@
             "label": "Run All Pre-commit Checks",
             "type": "shell",
             "command": "pre-commit",
-            "args": ["run", "--all-files"],
+            "args": [
+                "run",
+                "--all-files"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -77,7 +82,15 @@
             "label": "Clean Project",
             "type": "shell",
             "command": "rm",
-            "args": ["-rf", "build/", "htmlcov/", ".coverage", "*.egg-info/", "__pycache__/", ".pytest_cache/"],
+            "args": [
+                "-rf",
+                "build/",
+                "htmlcov/",
+                ".coverage",
+                "*.egg-info/",
+                "__pycache__/",
+                ".pytest_cache/"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -93,7 +106,11 @@
             "label": "Install Dependencies",
             "type": "shell",
             "command": "pip",
-            "args": ["install", "-e", ".[dev]"],
+            "args": [
+                "install",
+                "-e",
+                ".[dev]"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -108,8 +125,12 @@
         {
             "label": "Open Coverage Report",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "webbrowser", "htmlcov/index.html"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "webbrowser",
+                "htmlcov/index.html"
+            ],
             "group": "build",
             "dependsOn": "Run Tests with Coverage",
             "presentation": {
@@ -122,13 +143,17 @@
             },
             "problemMatcher": []
         },
-
         // ============ Container Management - Bulk Operations ============
         {
             "label": "Container: Build All",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "build-all"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "build-all"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -144,8 +169,14 @@
         {
             "label": "Container: Build All (Rebuild)",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "build-all", "--rebuild"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "build-all",
+                "--rebuild"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -161,8 +192,13 @@
         {
             "label": "Container: Start All",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "start-all"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "start-all"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -178,8 +214,13 @@
         {
             "label": "Container: Stop All",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "stop-all"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "stop-all"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -195,8 +236,14 @@
         {
             "label": "Container: Remove All",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "remove-all", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "remove-all",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -212,8 +259,14 @@
         {
             "label": "Container: Remove All Images",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "remove-all-images", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "remove-all-images",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -229,8 +282,14 @@
         {
             "label": "Container: Clean All",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "clean-all", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "clean-all",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -246,8 +305,14 @@
         {
             "label": "Container: List All",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "list-containers", "-a"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "list-containers",
+                "-a"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -263,8 +328,13 @@
         {
             "label": "Container: List Configurations",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "list-configs"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "list-configs"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -277,13 +347,18 @@
             "problemMatcher": [],
             "detail": "List available container configurations"
         },
-
         // ============ Container Testing ============
         {
             "label": "Container: Test All",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "test", "--verbose"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "test",
+                "--verbose"
+            ],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -299,8 +374,15 @@
         {
             "label": "Container: Test with Build",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "test", "--build", "--verbose"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "test",
+                "--build",
+                "--verbose"
+            ],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -316,8 +398,16 @@
         {
             "label": "Container: Test Apache",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "test", "-c", "apache", "--verbose"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "test",
+                "-c",
+                "apache",
+                "--verbose"
+            ],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -333,8 +423,16 @@
         {
             "label": "Container: Test Mail",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "test", "-c", "mail", "--verbose"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "test",
+                "-c",
+                "mail",
+                "--verbose"
+            ],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -350,8 +448,16 @@
         {
             "label": "Container: Test DNS",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "test", "-c", "dns", "--verbose"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "test",
+                "-c",
+                "dns",
+                "--verbose"
+            ],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -364,13 +470,19 @@
             "problemMatcher": [],
             "detail": "Run DNS integration tests"
         },
-
         // ============ Individual Container Management - Apache ============
         {
             "label": "Apache - Build",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "build", "-c", "apache"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "build",
+                "-c",
+                "apache"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -386,8 +498,15 @@
         {
             "label": "Apache - Run",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "run", "-c", "apache"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "run",
+                "-c",
+                "apache"
+            ],
             "group": "build",
             "dependsOn": "Apache - Build",
             "presentation": {
@@ -404,8 +523,15 @@
         {
             "label": "Apache - Stop",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "stop", "-c", "apache"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "stop",
+                "-c",
+                "apache"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -421,8 +547,16 @@
         {
             "label": "Apache - Remove",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "remove", "-c", "apache", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "remove",
+                "-c",
+                "apache",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -438,8 +572,16 @@
         {
             "label": "Apache - Logs",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "logs", "-c", "apache", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "logs",
+                "-c",
+                "apache",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -452,13 +594,19 @@
             "problemMatcher": [],
             "detail": "Follow Apache container logs"
         },
-
         // ============ Individual Container Management - Mail ============
         {
             "label": "Mail - Build",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "build", "-c", "mail"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "build",
+                "-c",
+                "mail"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -474,8 +622,15 @@
         {
             "label": "Mail - Run",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "run", "-c", "mail"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "run",
+                "-c",
+                "mail"
+            ],
             "group": "build",
             "dependsOn": "Mail - Build",
             "presentation": {
@@ -492,8 +647,15 @@
         {
             "label": "Mail - Stop",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "stop", "-c", "mail"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "stop",
+                "-c",
+                "mail"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -509,8 +671,16 @@
         {
             "label": "Mail - Remove",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "remove", "-c", "mail", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "remove",
+                "-c",
+                "mail",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -526,8 +696,16 @@
         {
             "label": "Mail - Logs",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "logs", "-c", "mail", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "logs",
+                "-c",
+                "mail",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -540,13 +718,19 @@
             "problemMatcher": [],
             "detail": "Follow Mail container logs"
         },
-
         // ============ Individual Container Management - DNS ============
         {
             "label": "DNS - Build",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "build", "-c", "dns"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "build",
+                "-c",
+                "dns"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -562,8 +746,15 @@
         {
             "label": "DNS - Run",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "run", "-c", "dns"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "run",
+                "-c",
+                "dns"
+            ],
             "group": "build",
             "dependsOn": "DNS - Build",
             "presentation": {
@@ -580,8 +771,15 @@
         {
             "label": "DNS - Stop",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "stop", "-c", "dns"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "stop",
+                "-c",
+                "dns"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -597,8 +795,16 @@
         {
             "label": "DNS - Remove",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "remove", "-c", "dns", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "remove",
+                "-c",
+                "dns",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -614,8 +820,16 @@
         {
             "label": "DNS - Logs",
             "type": "shell",
-            "command": "python",
-            "args": ["-m", "net_servers.cli", "container", "logs", "-c", "dns", "-f"],
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "logs",
+                "-c",
+                "dns",
+                "-f"
+            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -628,7 +842,6 @@
             "problemMatcher": [],
             "detail": "Follow DNS container logs"
         },
-
         // ============ Workflow Tasks ============
         {
             "label": "Container: Full Workflow",

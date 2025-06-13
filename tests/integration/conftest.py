@@ -9,19 +9,34 @@ import pytest
 from net_servers.actions.container import ContainerManager
 from net_servers.config.containers import get_container_config
 
+from .port_manager import get_port_manager
+
 
 class ContainerTestHelper:
     """Helper class for container integration testing."""
 
-    def __init__(self, config_name: str):
+    def __init__(self, config_name: str, port_mapping: str = None):
         """Initialize container test helper.
 
         Args:
             config_name: Name of the container configuration to use
+            port_mapping: Optional port mapping string, if None will use dynamic
+                allocation
         """
         self.config_name = config_name
         self.config = get_container_config(config_name)
         self.manager = ContainerManager(self.config)
+        self.port_mapping = port_mapping
+
+        # If no port mapping provided, allocate dynamic ports
+        if self.port_mapping is None:
+            try:
+                self.port_mapping = get_port_manager().get_port_mapping_string(
+                    config_name
+                )
+            except ValueError:
+                # Service may not have predefined ports, that's OK
+                self.port_mapping = None
 
     def start_container(self, port_mapping: str = None) -> bool:
         """Start the container and wait for it to be ready."""
@@ -29,8 +44,11 @@ class ContainerTestHelper:
         self.manager.stop()
         self.manager.remove_container(force=True)
 
+        # Use provided port mapping, or fall back to instance default
+        actual_port_mapping = port_mapping or self.port_mapping
+
         # Start the container
-        result = self.manager.run(detached=True, port_mapping=port_mapping)
+        result = self.manager.run(detached=True, port_mapping=actual_port_mapping)
         if not result.success:
             return False
 
@@ -82,6 +100,14 @@ class ContainerTestHelper:
 
     def get_container_port(self, internal_port: int) -> int:
         """Get the host port mapped to the container's internal port."""
+        # First try to get from port manager if available
+        try:
+            port_manager = get_port_manager()
+            return port_manager.get_host_port(self.config_name, internal_port)
+        except (KeyError, ValueError):
+            # Fall back to querying the container runtime
+            pass
+
         try:
             result = subprocess.run(
                 ["podman", "port", self.config.container_name, str(internal_port)],
@@ -127,8 +153,8 @@ def apache_container(
 
     helper = ContainerTestHelper("apache")
 
-    # Start container with port mapping
-    if not helper.start_container(port_mapping="8080:80"):
+    # Start container with dynamic port mapping
+    if not helper.start_container():
         pytest.fail("Failed to start Apache container")
 
     try:
@@ -157,9 +183,8 @@ def mail_container(
 
     helper = ContainerTestHelper("mail")
 
-    # Use fixed ports for session-scoped container to avoid conflicts
-    port_mapping = "25025:25,25143:143,25110:110"
-    if not helper.start_container(port_mapping=port_mapping):
+    # Start container with dynamic port mapping
+    if not helper.start_container():
         pytest.fail("Failed to start Mail container")
 
     # Give mail services extra time to initialize
