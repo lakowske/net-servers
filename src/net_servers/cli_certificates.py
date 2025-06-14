@@ -94,11 +94,15 @@ def provision_certificate(
 
 
 @certificates.command("renew")
-@click.option("--domain", "-d", required=True, help="Domain name to renew")
+@click.option("--domain", "-d", help="Domain name to renew")
 @click.option("--all", is_flag=True, help="Renew all certificates")
-def renew_certificate(domain: str, all: bool) -> None:
+def renew_certificate(domain: Optional[str], all: bool) -> None:
     """Renew SSL/TLS certificates."""
     try:
+        if not domain and not all:
+            click.echo("Error: Must specify either --domain or --all", err=True)
+            sys.exit(1)
+
         cert_manager = get_default_certificate_manager()
 
         if all:

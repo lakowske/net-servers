@@ -347,6 +347,100 @@ url = f"http://localhost" + ":" + f"{port}"  # If first part needs variables
 
 **Alternative**: Use `# noqa: E231` comment for legitimate cases where colons are part of URLs/addresses.
 
+### Handling False Positive Linting Errors
+
+Linters like flake8 occasionally produce false positives due to complex parsing edge cases. Here's how to handle them systematically:
+
+#### 1. **Identify the Real Issue**
+When flake8 reports an error, first verify if it's legitimate:
+```bash
+# Run flake8 directly on the file to see the exact error
+flake8 path/to/file.py
+
+# Check if the error makes sense in context
+# Sometimes the line number or description doesn't match the actual issue
+```
+
+#### 2. **Common False Positive Patterns**
+- **E713 "test for membership should be 'not in'"**: Can trigger on legitimate `x in y` patterns in complex expressions
+- **E231 "missing whitespace after ':'"**: F-string colon parsing issues in URLs, port mappings
+- **F541 "f-string missing placeholders"**: When combining f-strings with string concatenation
+
+#### 3. **Resolution Strategies (in order of preference)**
+
+**Option A: Refactor the Code Pattern**
+```python
+# Instead of triggering E713 on complex assert
+assert (domain in output), f"Domain {domain} not found"
+
+# Use explicit logic that's clearer to both humans and linters
+missing_domains = [d for d in domains if d not in output]
+if missing_domains:
+    pytest.fail(f"Missing domains: {missing_domains}")
+```
+
+**Option B: Use Specific `# noqa` Comments**
+```python
+# Suppress specific error codes when the code is correct
+url = f"http://localhost:{port}"  # noqa: E231
+assert domain in output  # noqa: E713
+```
+
+**Option C: Use General `# noqa` for Persistent Issues**
+```python
+# When specific noqa doesn't work (rare edge cases)
+problematic_line()  # noqa
+```
+
+**Option D: Function-Level Suppression**
+```python
+def test_something():  # noqa: E713
+    """When multiple false positives occur in one function."""
+    # Function content
+```
+
+#### 4. **Pre-commit vs Direct Flake8 Differences**
+Sometimes pre-commit flake8 behaves differently than direct flake8:
+```bash
+# Test both to identify discrepancies
+flake8 file.py                    # Direct flake8
+pre-commit run flake8 --files file.py  # Pre-commit flake8
+
+# Pre-commit may use different flake8 version or configuration
+# Check .pre-commit-config.yaml for version differences
+```
+
+#### 5. **Documenting Suppressions**
+When adding `# noqa` comments, document why:
+```python
+# noqa: E713 - False positive on legitimate membership test
+assert domain in output, f"Domain {domain} not found"
+
+# noqa: E231 - URL colon parsing issue in f-string
+url = f"https://localhost:{port}"
+```
+
+#### 6. **When to Investigate vs. Suppress**
+- **Investigate first**: Most linting errors are legitimate and should be fixed
+- **Suppress after verification**: Only when you're confident the code is correct
+- **Prefer refactoring**: If possible, rewrite to avoid the pattern triggering the false positive
+- **Document patterns**: Add examples to this guide when new false positives are discovered
+
+#### 7. **Black vs. Flake8 Conflicts**
+When Black auto-formatting conflicts with `# noqa` placement:
+```python
+# Black may move noqa comments, test different placements
+result = some_function(  # noqa: E713
+    complex_args
+)
+
+# Sometimes putting noqa on a different line works better
+# noqa: E713
+result = some_function(complex_args)
+```
+
+**Remember**: False positives are rare. Always verify the code is actually correct before suppressing linter warnings.
+
 ## SSL/TLS Certificate Management
 
 The project includes automatic SSL/TLS certificate management for all testing containers. This ensures that HTTPS and mail SSL services work out of the box.
