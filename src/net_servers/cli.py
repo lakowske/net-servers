@@ -127,19 +127,15 @@ def container() -> None:
 @click.option("--image-name", help="Override image name")
 @click.option("--dockerfile", help="Override dockerfile path")
 @click.option("--rebuild", is_flag=True, help="Force rebuild (no cache)")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
 def build(
     config: str,
     image_name: Optional[str],
     dockerfile: Optional[str],
     rebuild: bool,
-    production: bool,
 ) -> None:
     """Build container image."""
     try:
-        container_config = get_container_config(
-            config, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(config, use_config_manager=False)
 
         # Apply overrides
         if image_name:
@@ -171,19 +167,15 @@ def build(
 @click.option("--port", "-p", type=int, help="Override port mapping (host port)")
 @click.option("--detached/--interactive", default=True, help="Run in detached mode")
 @click.option("--port-mapping", help="Custom port mapping (e.g., '8080:80')")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
 def run(
     config: str,
     port: Optional[int],
     detached: bool,
     port_mapping: Optional[str],
-    production: bool,
 ) -> None:
     """Run container."""
     try:
-        container_config = get_container_config(
-            config, use_config_manager=True, production_mode=production
-        )
+        container_config = get_container_config(config, use_config_manager=True)
 
         # Apply port override
         if port:
@@ -212,13 +204,10 @@ def run(
 
 @container.command()
 @click.option("--config", "-c", required=True, help="Config name (apache, mail)")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def stop(config: str, production: bool) -> None:
+def stop(config: str) -> None:
     """Stop running container."""
     try:
-        container_config = get_container_config(
-            config, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(config, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.stop()
 
@@ -241,13 +230,10 @@ def stop(config: str, production: bool) -> None:
 @container.command()
 @click.option("--config", "-c", required=True, help="Config name (apache, mail)")
 @click.option("--force", "-f", is_flag=True, help="Force remove")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def remove(config: str, force: bool, production: bool) -> None:
+def remove(config: str, force: bool) -> None:
     """Remove container."""
     try:
-        container_config = get_container_config(
-            config, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(config, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
 
@@ -270,13 +256,10 @@ def remove(config: str, force: bool, production: bool) -> None:
 @container.command()
 @click.option("--config", "-c", required=True, help="Config name (apache, mail)")
 @click.option("--force", "-f", is_flag=True, help="Force remove")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def remove_image(config: str, force: bool, production: bool) -> None:
+def remove_image(config: str, force: bool) -> None:
     """Remove container image."""
     try:
-        container_config = get_container_config(
-            config, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(config, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.remove_image(force=force)
 
@@ -327,13 +310,10 @@ def list_containers(all: bool) -> None:
 @click.option("--config", "-c", required=True, help="Config name (apache, mail)")
 @click.option("--follow", "-f", is_flag=True, help="Follow log output")
 @click.option("--tail", type=int, help="Number of lines to show from end of logs")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def logs(config: str, follow: bool, tail: Optional[int], production: bool) -> None:
+def logs(config: str, follow: bool, tail: Optional[int]) -> None:
     """Show container logs."""
     try:
-        container_config = get_container_config(
-            config, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(config, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.logs(follow=follow, tail=tail)
 
@@ -353,17 +333,14 @@ def logs(config: str, follow: bool, tail: Optional[int], production: bool) -> No
 
 @container.command("build-all")
 @click.option("--rebuild", is_flag=True, help="Force rebuild (no cache)")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def build_all(rebuild: bool, production: bool) -> None:
+def build_all(rebuild: bool) -> None:
     """Build all container images."""
     configs = list_container_configs()
     failed = []
 
     for name, _ in configs.items():
         click.echo(f"Building {name}...")
-        container_config = get_container_config(
-            name, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(name, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.build(rebuild=rebuild)
 
@@ -385,17 +362,14 @@ def build_all(rebuild: bool, production: bool) -> None:
 
 @container.command("start-all")
 @click.option("--detached/--interactive", default=True, help="Run in detached mode")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def start_all(detached: bool, production: bool) -> None:
+def start_all(detached: bool) -> None:
     """Start all containers."""
     configs = list_container_configs()
     failed = []
 
     for name, _ in configs.items():
         click.echo(f"Starting {name}...")
-        container_config = get_container_config(
-            name, use_config_manager=True, production_mode=production
-        )
+        container_config = get_container_config(name, use_config_manager=True)
         manager = ContainerManager(container_config)
         result = manager.run(detached=detached)
 
@@ -417,17 +391,14 @@ def start_all(detached: bool, production: bool) -> None:
 
 
 @container.command("stop-all")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def stop_all(production: bool) -> None:
+def stop_all() -> None:
     """Stop all containers."""
     configs = list_container_configs()
     failed = []
 
     for name, _ in configs.items():
         click.echo(f"Stopping {name}...")
-        container_config = get_container_config(
-            name, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(name, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.stop()
 
@@ -448,17 +419,14 @@ def stop_all(production: bool) -> None:
 
 @container.command("remove-all")
 @click.option("--force", "-f", is_flag=True, help="Force remove")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def remove_all(force: bool, production: bool) -> None:
+def remove_all(force: bool) -> None:
     """Remove all containers."""
     configs = list_container_configs()
     failed = []
 
     for name, _ in configs.items():
         click.echo(f"Removing container {name}...")
-        container_config = get_container_config(
-            name, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(name, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
 
@@ -479,17 +447,14 @@ def remove_all(force: bool, production: bool) -> None:
 
 @container.command("remove-all-images")
 @click.option("--force", "-f", is_flag=True, help="Force remove")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def remove_all_images(force: bool, production: bool) -> None:
+def remove_all_images(force: bool) -> None:
     """Remove all container images."""
     configs = list_container_configs()
     failed = []
 
     for name, _ in configs.items():
         click.echo(f"Removing image {name}...")
-        container_config = get_container_config(
-            name, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(name, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.remove_image(force=force)
 
@@ -510,8 +475,7 @@ def remove_all_images(force: bool, production: bool) -> None:
 
 @container.command("clean-all")
 @click.option("--force", "-f", is_flag=True, help="Force remove")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def clean_all(force: bool, production: bool) -> None:
+def clean_all(force: bool) -> None:
     """Stop all containers, remove containers, and remove images."""
     click.echo("Cleaning all containers and images...")
 
@@ -519,9 +483,7 @@ def clean_all(force: bool, production: bool) -> None:
     click.echo("Stopping all containers...")
     configs = list_container_configs()
     for name in configs.keys():
-        container_config = get_container_config(
-            name, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(name, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.stop()
         if result.success:
@@ -530,9 +492,7 @@ def clean_all(force: bool, production: bool) -> None:
     # Remove all containers
     click.echo("Removing all containers...")
     for name in configs.keys():
-        container_config = get_container_config(
-            name, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(name, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
         if result.success:
@@ -541,9 +501,7 @@ def clean_all(force: bool, production: bool) -> None:
     # Remove all images
     click.echo("Removing all images...")
     for name in configs.keys():
-        container_config = get_container_config(
-            name, use_config_manager=False, production_mode=production
-        )
+        container_config = get_container_config(name, use_config_manager=False)
         manager = ContainerManager(container_config)
         result = manager.remove_image(force=force)
         if result.success:
@@ -574,10 +532,7 @@ def list_configs() -> None:
 )
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose test output")
 @click.option("--build", "-b", is_flag=True, help="Build containers before testing")
-@click.option("--production", is_flag=True, help="Use production mode (standard ports)")
-def test_integration(
-    config: Optional[str], verbose: bool, build: bool, production: bool
-) -> None:
+def test_integration(config: Optional[str], verbose: bool, build: bool) -> None:
     """Run integration tests for container services."""
     import subprocess
 
@@ -615,9 +570,7 @@ def test_integration(
         click.echo("Building containers before testing...")
         if config:
             # Build specific container
-            container_config = get_container_config(
-                config, use_config_manager=False, production_mode=production
-            )
+            container_config = get_container_config(config, use_config_manager=False)
             manager = ContainerManager(container_config)
             result = manager.build()
             if not result.success:
@@ -628,9 +581,7 @@ def test_integration(
             # Build all containers
             configs = list_container_configs()
             for name, _ in configs.items():
-                container_config = get_container_config(
-                    name, use_config_manager=False, production_mode=production
-                )
+                container_config = get_container_config(name, use_config_manager=False)
                 manager = ContainerManager(container_config)
                 result = manager.build()
                 if not result.success:

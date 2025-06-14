@@ -30,7 +30,7 @@ environments:
     base_path: /Users/seth/.net-servers/production
     domain: example.com
     admin_email: admin@example.com
-    enabled: false
+    enabled: true
     tags:
       - production
       - live

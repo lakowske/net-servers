@@ -143,9 +143,123 @@
             },
             "problemMatcher": []
         },
-        // ============ Container Management - Testing Mode (Default) ============
+        // ============ Environment Management ============
         {
-            "label": "Testing: Build All",
+            "label": "Environments: List",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "environments",
+                "list"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "List all available environments"
+        },
+        {
+            "label": "Environments: Show Current",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "environments",
+                "current"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Show current environment details"
+        },
+        {
+            "label": "Environments: Switch to Development",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "environments",
+                "switch",
+                "development"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Switch to development environment"
+        },
+        {
+            "label": "Environments: Switch to Testing",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "environments",
+                "switch",
+                "testing"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Switch to testing environment"
+        },
+        {
+            "label": "Environments: Switch to Production",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "environments",
+                "switch",
+                "production"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Switch to production environment"
+        },
+        // ============ Container Management (Environment-Aware) ============
+        {
+            "label": "Container: Build All",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -154,7 +268,7 @@
                 "container",
                 "build-all"
             ],
-            "group": "test",
+            "group": "build",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -164,10 +278,10 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Build all container images (testing mode)"
+            "detail": "Build all container images for current environment"
         },
         {
-            "label": "Testing: Start All",
+            "label": "Container: Start All",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -176,7 +290,7 @@
                 "container",
                 "start-all"
             ],
-            "group": "test",
+            "group": "build",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -186,10 +300,10 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Start all containers (testing mode: 8080, 2525, 5353)"
+            "detail": "Start all containers for current environment"
         },
         {
-            "label": "Testing: Stop All",
+            "label": "Container: Stop All",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -198,7 +312,7 @@
                 "container",
                 "stop-all"
             ],
-            "group": "test",
+            "group": "build",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -208,10 +322,10 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Stop all testing containers"
+            "detail": "Stop all containers for current environment"
         },
         {
-            "label": "Testing: Remove All Containers",
+            "label": "Container: Remove All",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -221,7 +335,7 @@
                 "remove-all",
                 "-f"
             ],
-            "group": "test",
+            "group": "build",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -231,10 +345,10 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Remove all testing containers (forced)"
+            "detail": "Remove all containers for current environment"
         },
         {
-            "label": "Testing: Clean All",
+            "label": "Container: Clean All",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -244,30 +358,6 @@
                 "clean-all",
                 "-f"
             ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop, remove testing containers and images"
-        },
-        // ============ Container Management - Production Mode ============
-        {
-            "label": "Production: Build All",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "build-all",
-                "--production"
-            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -278,125 +368,7 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Build all container images (production mode)"
-        },
-        {
-            "label": "Production: Start All",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "start-all",
-                "--production"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Start all containers (production mode: 80, 25, 53)"
-        },
-        {
-            "label": "Production: Stop All",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "stop-all",
-                "--production"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop all production containers"
-        },
-        {
-            "label": "Production: Remove All Containers",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "remove-all",
-                "--production",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Remove all production containers (forced)"
-        },
-        {
-            "label": "Production: Clean All",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "clean-all",
-                "--production",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop, remove production containers and images"
-        },
-        // ============ Container Management - Utility Tasks ============
-        {
-            "label": "Container: Remove All Images",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "remove-all-images",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Remove all container images (shared between modes)"
+            "detail": "Stop and remove all containers and images for current environment"
         },
         {
             "label": "Container: List All",
@@ -419,17 +391,20 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "List all containers (running and stopped)"
+            "detail": "List all containers (all environments)"
         },
+        // ============ Individual Container Management ============
         {
-            "label": "Container: List Configurations",
+            "label": "Apache: Build",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
                 "-m",
                 "net_servers.cli",
                 "container",
-                "list-configs"
+                "build",
+                "-c",
+                "apache"
             ],
             "group": "build",
             "presentation": {
@@ -441,7 +416,277 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "List available container configurations"
+            "detail": "Build Apache container image"
+        },
+        {
+            "label": "Apache: Run",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "run",
+                "-c",
+                "apache"
+            ],
+            "group": "build",
+            "dependsOn": "Apache: Build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run Apache container in current environment"
+        },
+        {
+            "label": "Apache: Stop",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "stop",
+                "-c",
+                "apache"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Stop Apache container in current environment"
+        },
+        {
+            "label": "Apache: Logs",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "logs",
+                "-c",
+                "apache",
+                "-f"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Follow Apache container logs"
+        },
+        {
+            "label": "Mail: Build",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "build",
+                "-c",
+                "mail"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build Mail container image"
+        },
+        {
+            "label": "Mail: Run",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "run",
+                "-c",
+                "mail"
+            ],
+            "group": "build",
+            "dependsOn": "Mail: Build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run Mail container in current environment"
+        },
+        {
+            "label": "Mail: Stop",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "stop",
+                "-c",
+                "mail"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Stop Mail container in current environment"
+        },
+        {
+            "label": "Mail: Logs",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "logs",
+                "-c",
+                "mail",
+                "-f"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Follow Mail container logs"
+        },
+        {
+            "label": "DNS: Build",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "build",
+                "-c",
+                "dns"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Build DNS container image"
+        },
+        {
+            "label": "DNS: Run",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "run",
+                "-c",
+                "dns"
+            ],
+            "group": "build",
+            "dependsOn": "DNS: Build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Run DNS container in current environment"
+        },
+        {
+            "label": "DNS: Stop",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "stop",
+                "-c",
+                "dns"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Stop DNS container in current environment"
+        },
+        {
+            "label": "DNS: Logs",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "container",
+                "logs",
+                "-c",
+                "dns",
+                "-f"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Follow DNS container logs"
         },
         // ============ Container Testing ============
         {
@@ -465,7 +710,7 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Run integration tests for all containers"
+            "detail": "Run integration tests for all containers in current environment"
         },
         {
             "label": "Container: Test with Build",
@@ -491,619 +736,16 @@
             "problemMatcher": [],
             "detail": "Build containers and run integration tests"
         },
-        {
-            "label": "Container: Test Apache",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "test",
-                "-c",
-                "apache",
-                "--verbose"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run Apache integration tests"
-        },
-        {
-            "label": "Container: Test Mail",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "test",
-                "-c",
-                "mail",
-                "--verbose"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run Mail integration tests"
-        },
-        {
-            "label": "Container: Test DNS",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "test",
-                "-c",
-                "dns",
-                "--verbose"
-            ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run DNS integration tests"
-        },
-        // ============ Individual Container Management - Apache ============
-        {
-            "label": "Apache - Build",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "build",
-                "-c",
-                "apache"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Build Apache container image"
-        },
-        {
-            "label": "Apache Testing - Run",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "run",
-                "-c",
-                "apache"
-            ],
-            "group": "build",
-            "dependsOn": "Apache - Build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run Apache container (testing mode: 8080)"
-        },
-        {
-            "label": "Apache Production - Run",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "run",
-                "-c",
-                "apache",
-                "--production"
-            ],
-            "group": "build",
-            "dependsOn": "Apache - Build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run Apache container (production mode: 80)"
-        },
-        {
-            "label": "Apache Testing - Stop",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "stop",
-                "-c",
-                "apache"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop Apache testing container"
-        },
-        {
-            "label": "Apache Production - Stop",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "stop",
-                "-c",
-                "apache",
-                "--production"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop Apache production container"
-        },
-        {
-            "label": "Apache Testing - Logs",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "logs",
-                "-c",
-                "apache",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Follow Apache testing container logs"
-        },
-        {
-            "label": "Apache Production - Logs",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "logs",
-                "-c",
-                "apache",
-                "--production",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Follow Apache production container logs"
-        },
-        // ============ Individual Container Management - Mail ============
-        {
-            "label": "Mail - Build",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "build",
-                "-c",
-                "mail"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Build Mail container image"
-        },
-        {
-            "label": "Mail Testing - Run",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "run",
-                "-c",
-                "mail"
-            ],
-            "group": "build",
-            "dependsOn": "Mail - Build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run Mail container (testing mode: 2525, 1143, etc.)"
-        },
-        {
-            "label": "Mail Production - Run",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "run",
-                "-c",
-                "mail",
-                "--production"
-            ],
-            "group": "build",
-            "dependsOn": "Mail - Build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run Mail container (production mode: 25, 143, etc.)"
-        },
-        {
-            "label": "Mail Testing - Stop",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "stop",
-                "-c",
-                "mail"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop Mail testing container"
-        },
-        {
-            "label": "Mail Production - Stop",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "stop",
-                "-c",
-                "mail",
-                "--production"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop Mail production container"
-        },
-        {
-            "label": "Mail Testing - Logs",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "logs",
-                "-c",
-                "mail",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Follow Mail testing container logs"
-        },
-        {
-            "label": "Mail Production - Logs",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "logs",
-                "-c",
-                "mail",
-                "--production",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Follow Mail production container logs"
-        },
-        // ============ Individual Container Management - DNS ============
-        {
-            "label": "DNS - Build",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "build",
-                "-c",
-                "dns"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Build DNS container image"
-        },
-        {
-            "label": "DNS Testing - Run",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "run",
-                "-c",
-                "dns"
-            ],
-            "group": "build",
-            "dependsOn": "DNS - Build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run DNS container (testing mode: 5353)"
-        },
-        {
-            "label": "DNS Production - Run",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "run",
-                "-c",
-                "dns",
-                "--production"
-            ],
-            "group": "build",
-            "dependsOn": "DNS - Build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Run DNS container (production mode: 53) - requires sudo"
-        },
-        {
-            "label": "DNS Testing - Stop",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "stop",
-                "-c",
-                "dns"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop DNS testing container"
-        },
-        {
-            "label": "DNS Production - Stop",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "stop",
-                "-c",
-                "dns",
-                "--production"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Stop DNS production container"
-        },
-        {
-            "label": "DNS Testing - Logs",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "logs",
-                "-c",
-                "dns",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Follow DNS testing container logs"
-        },
-        {
-            "label": "DNS Production - Logs",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "container",
-                "logs",
-                "-c",
-                "dns",
-                "--production",
-                "-f"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Follow DNS production container logs"
-        },
         // ============ Workflow Tasks ============
         {
-            "label": "Testing: Quick Start",
+            "label": "Quick Start",
             "dependsOrder": "sequence",
             "dependsOn": [
-                "Testing: Build All",
-                "Testing: Start All"
+                "Container: Build All",
+                "Container: Start All"
             ],
             "group": {
-                "kind": "test",
+                "kind": "build",
                 "isDefault": true
             },
             "presentation": {
@@ -1115,36 +757,17 @@
                 "clear": true
             },
             "problemMatcher": [],
-            "detail": "Quick testing workflow: build → start (no cleanup)"
+            "detail": "Quick workflow: build → start (current environment)"
         },
         {
-            "label": "Testing: Full Workflow (Clean)",
+            "label": "Full Workflow (Clean)",
             "dependsOrder": "sequence",
             "dependsOn": [
-                "Testing: Clean All",
-                "Testing: Build All",
-                "Testing: Start All",
+                "Container: Clean All",
+                "Container: Build All",
+                "Container: Start All",
                 "Container: Test All"
             ],
-            "group": "test",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": true
-            },
-            "problemMatcher": [],
-            "detail": "Complete testing workflow with cleanup: clean → build → start → test"
-        },
-        {
-            "label": "Production: Quick Start",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "Production: Build All",
-                "Production: Start All"
-            ],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -1155,112 +778,9 @@
                 "clear": true
             },
             "problemMatcher": [],
-            "detail": "Quick production workflow: build → start (no cleanup)"
-        },
-        {
-            "label": "Production: Full Workflow (Clean)",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "Production: Clean All",
-                "Production: Build All",
-                "Production: Start All"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": true
-            },
-            "problemMatcher": [],
-            "detail": "Complete production workflow with cleanup: clean → build → start"
-        },
-        {
-            "label": "Switch: Testing to Production",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "Testing: Stop All",
-                "Production: Start All"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": true
-            },
-            "problemMatcher": [],
-            "detail": "Stop testing containers and start production containers"
-        },
-        {
-            "label": "Switch: Production to Testing",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "Production: Stop All",
-                "Testing: Start All"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": true
-            },
-            "problemMatcher": [],
-            "detail": "Stop production containers and start testing containers"
+            "detail": "Complete workflow with cleanup: clean → build → start → test"
         },
         // ============ SSL/TLS Certificate Management ============
-        {
-            "label": "Certificates: Setup (Staging)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "certificates",
-                "setup"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Setup staging SSL certificates for all configured domains"
-        },
-        {
-            "label": "Certificates: Setup (Production)",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "certificates",
-                "setup",
-                "--production"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Setup production SSL certificates for all configured domains"
-        },
         {
             "label": "Certificates: List",
             "type": "shell",
@@ -1282,30 +802,7 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "List all managed SSL certificates with details"
-        },
-        {
-            "label": "Certificates: Renew All",
-            "type": "shell",
-            "command": "${workspaceFolder}/.venv/bin/python",
-            "args": [
-                "-m",
-                "net_servers.cli",
-                "certificates",
-                "renew",
-                "--all"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared",
-                "showReuseMessage": true,
-                "clear": false
-            },
-            "problemMatcher": [],
-            "detail": "Renew all SSL certificates that need renewal"
+            "detail": "List all managed SSL certificates for current environment"
         },
         {
             "label": "Certificates: Create Self-Signed",
@@ -1315,14 +812,9 @@
                 "-m",
                 "net_servers.cli",
                 "certificates",
-                "provision",
-                "-d",
+                "provision-self-signed",
+                "--domain",
                 "local.dev",
-                "--self-signed",
-                "--san",
-                "mail.local.dev",
-                "--san",
-                "www.local.dev",
                 "--force"
             ],
             "group": "build",
@@ -1335,7 +827,7 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Create self-signed certificate for development"
+            "detail": "Create self-signed certificate for current environment"
         }
     ]
 }

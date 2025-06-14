@@ -549,35 +549,35 @@ class TestContainerConfigs:
     def test_get_apache_config(self) -> None:
         """Test getting Apache configuration."""
         config = get_container_config(
-            "apache", use_config_manager=False, production_mode=True
+            "apache", use_config_manager=False, environment_name="development"
         )
 
         assert config.image_name == "net-servers-apache"
         assert config.dockerfile == "docker/apache/Dockerfile"
-        assert config.port == 80
-        assert config.container_name == "net-servers-apache"
+        assert config.port == 8080
+        assert config.container_name == "net-servers-apache-development"
 
     def test_get_mail_config(self) -> None:
         """Test getting mail configuration."""
         config = get_container_config(
-            "mail", use_config_manager=False, production_mode=True
+            "mail", use_config_manager=False, environment_name="development"
         )
 
         assert config.image_name == "net-servers-mail"
         assert config.dockerfile == "docker/mail/Dockerfile"
-        assert config.port == 25
-        assert config.container_name == "net-servers-mail"
+        assert config.port == 2525
+        assert config.container_name == "net-servers-mail-development"
 
     def test_get_dns_config(self) -> None:
         """Test getting DNS configuration."""
         config = get_container_config(
-            "dns", use_config_manager=False, production_mode=True
+            "dns", use_config_manager=False, environment_name="development"
         )
 
         assert config.image_name == "net-servers-dns"
         assert config.dockerfile == "docker/dns/Dockerfile"
-        assert config.port == 53
-        assert config.container_name == "net-servers-dns"
+        assert config.port == 5354
+        assert config.container_name == "net-servers-dns-development"
 
     def test_get_unknown_config(self) -> None:
         """Test getting unknown configuration raises error."""

@@ -20,23 +20,32 @@ class ContainerTestHelper:
 
         Args:
             config_name: Name of the container configuration to use
-            port_mapping: Optional port mapping string, if None will use dynamic
-                allocation
+            port_mapping: Optional port mapping string, if None will use testing
+                environment ports
         """
         self.config_name = config_name
-        self.config = get_container_config(config_name)
+        # Use testing environment for integration tests
+        self.config = get_container_config(config_name, environment_name="testing")
         self.manager = ContainerManager(self.config)
         self.port_mapping = port_mapping
 
-        # If no port mapping provided, allocate dynamic ports
+        # If no port mapping provided, use testing environment ports
         if self.port_mapping is None:
-            try:
-                self.port_mapping = get_port_manager().get_port_mapping_string(
-                    config_name
-                )
-            except ValueError:
-                # Service may not have predefined ports, that's OK
-                self.port_mapping = None
+            # Use the testing environment port mappings directly
+            if self.config.port_mappings:
+                mapping_parts = []
+                for pm in self.config.port_mappings:
+                    mapping_parts.append(pm.to_podman_arg())
+                self.port_mapping = ",".join(mapping_parts)
+            else:
+                # Fallback to dynamic allocation if no port mappings
+                try:
+                    self.port_mapping = get_port_manager().get_port_mapping_string(
+                        config_name
+                    )
+                except ValueError:
+                    # Service may not have predefined ports, that's OK
+                    self.port_mapping = None
 
     def start_container(self, port_mapping: str = None) -> bool:
         """Start the container and wait for it to be ready."""
@@ -100,7 +109,12 @@ class ContainerTestHelper:
 
     def get_container_port(self, internal_port: int) -> int:
         """Get the host port mapped to the container's internal port."""
-        # First try to get from port manager if available
+        # First try to get from testing environment configuration
+        for port_mapping in self.config.port_mappings:
+            if port_mapping.container_port == internal_port:
+                return port_mapping.host_port
+
+        # Fall back to port manager if available
         try:
             port_manager = get_port_manager()
             return port_manager.get_host_port(self.config_name, internal_port)

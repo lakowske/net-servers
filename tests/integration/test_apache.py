@@ -18,13 +18,15 @@ class TestApacheContainer:
 
     def test_02_apache_serves_pages(self, apache_container: ContainerTestHelper):
         """Test Apache serves HTTP requests (service running and accessible)."""
-        port = apache_container.get_container_port(80)
-        url = "http://localhost:" + str(port)
+        # Test HTTPS first since container enables SSL by default
+        https_port = apache_container.get_container_port(443)
+        https_url = "https://localhost:" + str(https_port)
 
-        # Make HTTP request with retry logic
+        # Make HTTPS request with retry logic and SSL verification disabled
+        response = None
         for attempt in range(5):
             try:
-                response = requests.get(url, timeout=10)
+                response = requests.get(https_url, timeout=10, verify=False)
                 if response.status_code == 200:
                     break
             except requests.RequestException:
@@ -37,12 +39,26 @@ class TestApacheContainer:
         content = response.text.lower()
         assert "apache" in content or "server" in content or "welcome" in content
 
+        # Test HTTP redirect to HTTPS
+        http_port = apache_container.get_container_port(80)
+        http_url = "http://localhost:" + str(http_port)
+
+        # Test that HTTP redirects (don't follow to avoid SSL issues)
+        response = requests.get(http_url, timeout=10, allow_redirects=False)
+        assert response.status_code == 301  # Should redirect to HTTPS
+
     def test_03_apache_error_handling(self, apache_container: ContainerTestHelper):
         """Test Apache error handling for non-existent pages."""
-        port = apache_container.get_container_port(80)
-        url = "http://localhost:" + str(port) + "/nonexistent-page"
+        # Use HTTPS since SSL is enabled
+        port = apache_container.get_container_port(443)
+        url = "https://localhost:" + str(port) + "/nonexistent-page"
 
-        response = requests.get(url, timeout=10)
+        # Create a new session to avoid connection reuse issues
+        session = requests.Session()
+        session.verify = False
+        response = session.get(url, timeout=10)
+        session.close()
+
         assert response.status_code == 404
 
     def test_04_apache_configuration_loaded(

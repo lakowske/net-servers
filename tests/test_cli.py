@@ -116,12 +116,10 @@ class TestCLI:
         mock_manager.run.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(
-            cli, ["container", "run", "-c", "apache", "--production"]
-        )
+        result = runner.invoke(cli, ["container", "run", "-c", "apache"])
 
         assert result.exit_code == 0
-        assert "Container net-servers-apache started" in result.output
+        assert "Container net-servers-apache-development started" in result.output
         mock_manager.run.assert_called_once_with(detached=True, port_mapping=None)
 
     @patch("net_servers.cli.ContainerManager")
@@ -174,12 +172,10 @@ class TestCLI:
         mock_manager.stop.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(
-            cli, ["container", "stop", "-c", "apache", "--production"]
-        )
+        result = runner.invoke(cli, ["container", "stop", "-c", "apache"])
 
         assert result.exit_code == 0
-        assert "Container net-servers-apache stopped" in result.output
+        assert "Container net-servers-apache-development stopped" in result.output
         mock_manager.stop.assert_called_once()
 
     @patch("net_servers.cli.ContainerManager")
@@ -194,12 +190,10 @@ class TestCLI:
         mock_manager.remove_container.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(
-            cli, ["container", "remove", "-c", "apache", "--production"]
-        )
+        result = runner.invoke(cli, ["container", "remove", "-c", "apache"])
 
         assert result.exit_code == 0
-        assert "Container net-servers-apache removed" in result.output
+        assert "Container net-servers-apache-development removed" in result.output
         mock_manager.remove_container.assert_called_once_with(force=False)
 
     @patch("net_servers.cli.ContainerManager")
@@ -231,9 +225,7 @@ class TestCLI:
         mock_manager.remove_image.return_value = success_result
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(
-            cli, ["container", "remove-image", "-c", "apache", "--production"]
-        )
+        result = runner.invoke(cli, ["container", "remove-image", "-c", "apache"])
 
         assert result.exit_code == 0
         assert "Image net-servers-apache removed" in result.output
@@ -532,7 +524,7 @@ class TestDisplayFunctions:
         """Test service name extraction for Apache."""
         from net_servers.cli import _get_service_name
 
-        assert _get_service_name("net-servers-apache") == "apache"
+        assert _get_service_name("net-servers-apache-development") == "apache"
         assert _get_service_name("apache-container") == "apache"
 
     def test_get_service_name_mail(self):
@@ -629,17 +621,17 @@ class TestDisplayFunctions:
         from net_servers.config.containers import get_container_config
 
         config = get_container_config(
-            "apache", use_config_manager=False, production_mode=False
+            "apache", use_config_manager=False, environment_name="testing"
         )
         _display_service_info(config)
 
         # Verify that port mappings and service URLs are displayed
         mock_echo.assert_any_call("Port Mappings:")
-        mock_echo.assert_any_call("  8080 -> 80")
-        mock_echo.assert_any_call("  8443 -> 443")
+        mock_echo.assert_any_call("  8180 -> 80")
+        mock_echo.assert_any_call("  8543 -> 443")
         mock_echo.assert_any_call("Service URLs:")
-        mock_echo.assert_any_call("  HTTP: http://localhost:8080")
-        mock_echo.assert_any_call("  HTTPS: https://localhost:8443")
+        mock_echo.assert_any_call("  HTTP: http://localhost:8180")
+        mock_echo.assert_any_call("  HTTPS: https://localhost:8543")
 
     @patch("net_servers.cli.click.echo")
     def test_display_service_info_with_custom_port_mapping(self, mock_echo):
@@ -648,7 +640,7 @@ class TestDisplayFunctions:
         from net_servers.config.containers import get_container_config
 
         config = get_container_config(
-            "apache", use_config_manager=False, production_mode=False
+            "apache", use_config_manager=False, environment_name="testing"
         )
         _display_service_info(config, "9000:80")
 
@@ -665,7 +657,7 @@ class TestDisplayFunctions:
         from net_servers.config.containers import get_container_config
 
         config = get_container_config(
-            "apache", use_config_manager=False, production_mode=False
+            "apache", use_config_manager=False, environment_name="testing"
         )
         _display_service_info(config, "9443:443")
 
@@ -774,52 +766,46 @@ class TestCLIErrorHandling:
         assert "Error: Invalid config" in result.output
 
     @patch("net_servers.cli.ContainerManager")
-    def test_run_command_with_production_mode(
+    def test_run_command_uses_current_environment(
         self, mock_manager_class, runner: CliRunner
     ) -> None:
-        """Test run command with production mode."""
+        """Test run command uses current environment."""
         mock_manager = Mock()
         mock_manager.run.return_value = ContainerResult(True, "container_id", "", 0)
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(
-            cli, ["container", "run", "-c", "apache", "--production"]
-        )
+        result = runner.invoke(cli, ["container", "run", "-c", "apache"])
 
         assert result.exit_code == 0
-        assert "Container net-servers-apache started" in result.output
+        assert "Container net-servers-apache-development started" in result.output
 
     @patch("net_servers.cli.ContainerManager")
-    def test_build_command_with_production_mode(
+    def test_build_command_uses_current_environment(
         self, mock_manager_class, runner: CliRunner
     ) -> None:
-        """Test build command with production mode."""
+        """Test build command uses current environment."""
         mock_manager = Mock()
         mock_manager.build.return_value = ContainerResult(True, "build output", "", 0)
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(
-            cli, ["container", "build", "-c", "apache", "--production"]
-        )
+        result = runner.invoke(cli, ["container", "build", "-c", "apache"])
 
         assert result.exit_code == 0
         assert "Successfully built net-servers-apache" in result.output
 
     @patch("net_servers.cli.ContainerManager")
-    def test_stop_command_with_production_mode(
+    def test_stop_command_uses_current_environment(
         self, mock_manager_class, runner: CliRunner
     ) -> None:
-        """Test stop command with production mode."""
+        """Test stop command uses current environment."""
         mock_manager = Mock()
         mock_manager.stop.return_value = ContainerResult(True, "", "", 0)
         mock_manager_class.return_value = mock_manager
 
-        result = runner.invoke(
-            cli, ["container", "stop", "-c", "apache", "--production"]
-        )
+        result = runner.invoke(cli, ["container", "stop", "-c", "apache"])
 
         assert result.exit_code == 0
-        assert "Container net-servers-apache stopped" in result.output
+        assert "Container net-servers-apache-development stopped" in result.output
 
 
 class TestIntegrationTestCommand:
@@ -1012,7 +998,7 @@ class TestIntegrationTestCommand:
             Mock(returncode=0),  # final test run
         ]
 
-        result = runner.invoke(cli, ["container", "test", "--production"])
+        result = runner.invoke(cli, ["container", "test"])
 
         assert result.exit_code == 0
         assert "Running integration tests..." in result.output
