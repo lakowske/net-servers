@@ -95,12 +95,28 @@ def ssl_helper() -> SSLTestHelper:
 @pytest.fixture(scope="session")
 def ssl_certificates(ssl_helper: SSLTestHelper) -> dict:
     """Create self-signed certificates for testing."""
-    # Create self-signed certificate
-    success = ssl_helper.create_self_signed_cert()
+    # Get current environment domain for certificate creation
+    import os
+
+    from net_servers.config.manager import ConfigurationManager
+
+    base_path = (
+        "/data" if os.path.exists("/data") else os.path.expanduser("~/.net-servers")
+    )
+    config_manager = ConfigurationManager(base_path)
+    try:
+        current_env = config_manager.get_current_environment()
+        domain = current_env.domain
+    except Exception:
+        # Fallback to testing domain if environment system fails
+        domain = "test.local.dev"
+
+    # Create self-signed certificate for the correct domain
+    success = ssl_helper.create_self_signed_cert(domain=domain)
     if not success:
         pytest.skip("Failed to create self-signed certificates")
 
-    return ssl_helper.get_cert_paths()
+    return ssl_helper.get_cert_paths(domain=domain)
 
 
 @pytest.fixture(scope="session")
@@ -113,15 +129,19 @@ def apache_ssl_container(
 
     helper = ContainerTestHelper("apache")
 
+    # Get domain from certificate path
+    cert_path = Path(ssl_certificates["cert"])
+    domain = cert_path.parent.name  # Extract domain from path structure
+
     # Set SSL environment variables
     env_vars = {
         "SSL_ENABLED": "true",
-        "APACHE_SERVER_NAME": "test.local",
-        "APACHE_SERVER_ADMIN": "admin@test.local",
+        "APACHE_SERVER_NAME": domain,
+        "APACHE_SERVER_ADMIN": f"admin@{domain}",
         "APACHE_DOCUMENT_ROOT": "/var/www/html",
-        "SSL_CERT_FILE": "/data/state/certificates/test.local/cert.pem",
-        "SSL_KEY_FILE": "/data/state/certificates/test.local/privkey.pem",
-        "SSL_CHAIN_FILE": "/data/state/certificates/test.local/fullchain.pem",
+        "SSL_CERT_FILE": f"/data/state/certificates/{domain}/cert.pem",
+        "SSL_KEY_FILE": f"/data/state/certificates/{domain}/privkey.pem",
+        "SSL_CHAIN_FILE": f"/data/state/certificates/{domain}/fullchain.pem",
     }
 
     # Add environment variables to container config
@@ -133,7 +153,7 @@ def apache_ssl_container(
     helper.config.volumes.append(
         VolumeMount(
             host_path=str(Path(ssl_certificates["cert"]).parent),
-            container_path="/data/state/certificates/test.local",
+            container_path=f"/data/state/certificates/{domain}",
             read_only=True,
         )
     )
@@ -174,13 +194,17 @@ def mail_ssl_container(
 
     helper = ContainerTestHelper("mail")
 
+    # Get domain from certificate path
+    cert_path = Path(ssl_certificates["cert"])
+    domain = cert_path.parent.name  # Extract domain from path structure
+
     # Set SSL environment variables
     env_vars = {
         "MAIL_TLS_ENABLED": "true",
         "MAIL_REQUIRE_TLS": "false",  # Allow both encrypted and unencrypted for testing
-        "MAIL_SSL_CERT_FILE": "/data/state/certificates/test.local/cert.pem",
-        "MAIL_SSL_KEY_FILE": "/data/state/certificates/test.local/privkey.pem",
-        "MAIL_SSL_CHAIN_FILE": "/data/state/certificates/test.local/fullchain.pem",
+        "MAIL_SSL_CERT_FILE": f"/data/state/certificates/{domain}/cert.pem",
+        "MAIL_SSL_KEY_FILE": f"/data/state/certificates/{domain}/privkey.pem",
+        "MAIL_SSL_CHAIN_FILE": f"/data/state/certificates/{domain}/fullchain.pem",
     }
 
     # Add environment variables to container config
@@ -192,7 +216,7 @@ def mail_ssl_container(
     helper.config.volumes.append(
         VolumeMount(
             host_path=str(Path(ssl_certificates["cert"]).parent),
-            container_path="/data/state/certificates/test.local",
+            container_path=f"/data/state/certificates/{domain}",
             read_only=True,
         )
     )

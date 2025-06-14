@@ -1,5 +1,6 @@
 """Environment management CLI commands."""
 
+import os
 import sys
 from pathlib import Path
 from typing import List
@@ -7,6 +8,14 @@ from typing import List
 import click
 
 from net_servers.config.manager import ConfigurationManager
+
+
+def _get_config_manager() -> ConfigurationManager:
+    """Get configuration manager with proper base path detection."""
+    base_path = (
+        "/data" if os.path.exists("/data") else os.path.expanduser("~/.net-servers")
+    )
+    return ConfigurationManager(base_path)
 
 
 @click.group()
@@ -22,7 +31,7 @@ def environments() -> None:
 def list_environments(current_only: bool, enabled_only: bool, format: str) -> None:
     """List all environments."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
         environments = config_manager.list_environments()
         current_env = config_manager.environments_config.current_environment
 
@@ -71,7 +80,7 @@ def list_environments(current_only: bool, enabled_only: bool, format: str) -> No
 def show_current() -> None:
     """Show the current environment."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
         current_env = config_manager.get_current_environment()
 
         click.echo(f"Current Environment: {current_env.name}")
@@ -94,7 +103,7 @@ def show_current() -> None:
 def switch_environment(name: str) -> None:
     """Switch to a different environment."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
         env = config_manager.switch_environment(name)
         click.echo(f"Switched to environment '{env.name}' at {env.base_path}")
 
@@ -122,7 +131,7 @@ def add_environment(
 ) -> None:
     """Add a new environment."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
         env = config_manager.add_environment(
             name=name,
             description=description,
@@ -144,7 +153,7 @@ def add_environment(
 def remove_environment(name: str, force: bool) -> None:
     """Remove an environment."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
 
         if not force:
             env = config_manager.get_environment(name)
@@ -173,7 +182,7 @@ def remove_environment(name: str, force: bool) -> None:
 def enable_environment(name: str) -> None:
     """Enable an environment."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
         config_manager.enable_environment(name)
         click.echo(f"Enabled environment '{name}'")
 
@@ -187,7 +196,7 @@ def enable_environment(name: str) -> None:
 def disable_environment(name: str) -> None:
     """Disable an environment."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
         config_manager.disable_environment(name)
         click.echo(f"Disabled environment '{name}'")
 
@@ -201,7 +210,7 @@ def disable_environment(name: str) -> None:
 def show_environment_info(name: str) -> None:
     """Show detailed information about an environment."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
         env = config_manager.get_environment(name)
 
         if not env:
@@ -250,7 +259,7 @@ def show_environment_info(name: str) -> None:
 def init_environments(force: bool) -> None:
     """Initialize environments configuration with defaults."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
 
         # Check if environments.yaml already exists
         env_config_path = config_manager.paths.config_path / "environments.yaml"
@@ -279,7 +288,7 @@ def init_environments(force: bool) -> None:
 def validate_environments() -> None:
     """Validate environments configuration."""
     try:
-        config_manager = ConfigurationManager()
+        config_manager = _get_config_manager()
         errors = config_manager.validate_configuration()
 
         if not errors:

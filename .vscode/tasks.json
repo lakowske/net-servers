@@ -698,6 +698,7 @@
                 "net_servers.cli",
                 "container",
                 "test",
+                "--build",
                 "--verbose"
             ],
             "group": "test",
@@ -713,7 +714,7 @@
             "detail": "Run integration tests for all containers in current environment"
         },
         {
-            "label": "Container: Test with Build",
+            "label": "Container: Test with SSL",
             "type": "shell",
             "command": "${workspaceFolder}/.venv/bin/python",
             "args": [
@@ -722,6 +723,7 @@
                 "container",
                 "test",
                 "--build",
+                "--include-ssl",
                 "--verbose"
             ],
             "group": "test",
@@ -734,7 +736,7 @@
                 "clear": false
             },
             "problemMatcher": [],
-            "detail": "Build containers and run integration tests"
+            "detail": "Build containers and run all integration tests including SSL/TLS"
         },
         // ============ Workflow Tasks ============
         {

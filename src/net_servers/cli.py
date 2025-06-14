@@ -532,7 +532,14 @@ def list_configs() -> None:
 )
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose test output")
 @click.option("--build", "-b", is_flag=True, help="Build containers before testing")
-def test_integration(config: Optional[str], verbose: bool, build: bool) -> None:
+@click.option(
+    "--include-ssl",
+    is_flag=True,
+    help="Include SSL/TLS tests (may fail without proper setup)",
+)
+def test_integration(
+    config: Optional[str], verbose: bool, build: bool, include_ssl: bool
+) -> None:
     """Run integration tests for container services."""
     import subprocess
 
@@ -602,7 +609,16 @@ def test_integration(config: Optional[str], verbose: bool, build: bool) -> None:
     if verbose:
         test_args.extend(["-v", "-s"])
 
+    # Exclude SSL tests by default unless explicitly requested
+    if not include_ssl:
+        test_args.extend(["-k", "not test_ssl_tls"])
+
     click.echo("Running integration tests...")
+    if not include_ssl:
+        click.echo(
+            "Note: SSL/TLS tests excluded by default. "
+            "Use --include-ssl to include them."
+        )
     click.echo(f"Command: {' '.join(test_args)}")
 
     result = subprocess.run(test_args)
