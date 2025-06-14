@@ -666,6 +666,11 @@ from net_servers.cli_certificates import certificates  # noqa: E402
 
 cli.add_command(certificates)
 
+# Add environment commands to main CLI
+from net_servers.cli_environments import environments  # noqa: E402
+
+cli.add_command(environments)
+
 
 if __name__ == "__main__":
     cli()

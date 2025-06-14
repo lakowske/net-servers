@@ -1,6 +1,7 @@
 """Configuration management for the net-servers project."""
 
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -10,6 +11,8 @@ from .schemas import (
     ConfigurationPaths,
     DomainConfig,
     DomainsConfig,
+    EnvironmentConfig,
+    EnvironmentsConfig,
     GlobalConfig,
     ServicesConfig,
     UserConfig,
@@ -41,6 +44,7 @@ class ConfigurationManager:
         self._users_config: Optional[UsersConfig] = None
         self._domains_config: Optional[DomainsConfig] = None
         self._services_config: Optional[ServicesConfig] = None
+        self._environments_config: Optional[EnvironmentsConfig] = None
 
     @property
     def global_config(self) -> GlobalConfig:
@@ -78,6 +82,15 @@ class ConfigurationManager:
             )
         return self._services_config
 
+    @property
+    def environments_config(self) -> EnvironmentsConfig:
+        """Get environments configuration."""
+        if self._environments_config is None:
+            self._environments_config = load_yaml_config(
+                self.paths.config_path / "environments.yaml", EnvironmentsConfig
+            )
+        return self._environments_config
+
     def reload_config(self) -> None:
         """Reload all configuration from disk."""
         self.logger.info("Reloading configuration from disk")
@@ -85,6 +98,7 @@ class ConfigurationManager:
         self._users_config = None
         self._domains_config = None
         self._services_config = None
+        self._environments_config = None
 
     def save_global_config(self, config: GlobalConfig) -> None:
         """Save global configuration to disk."""
@@ -105,6 +119,11 @@ class ConfigurationManager:
         """Save services configuration to disk."""
         save_yaml_config(config, self.paths.config_path / "services" / "services.yaml")
         self._services_config = config
+
+    def save_environments_config(self, config: EnvironmentsConfig) -> None:
+        """Save environments configuration to disk."""
+        save_yaml_config(config, self.paths.config_path / "environments.yaml")
+        self._environments_config = config
 
     def get_container_volumes(self, development_mode: bool = True) -> List[VolumeMount]:
         """Get volume mounts for containers."""
@@ -302,6 +321,50 @@ class ConfigurationManager:
             default_services.mail.virtual_domains = [self.global_config.system.domain]
             self.save_services_config(default_services)
 
+        # Create default environments config
+        if not (self.paths.config_path / "environments.yaml").exists():
+            now = datetime.now().isoformat()
+            default_environments = EnvironmentsConfig(
+                current_environment="development",
+                environments=[
+                    EnvironmentConfig(
+                        name="development",
+                        description="Development environment for local testing",
+                        base_path=str(self.paths.base_path),
+                        domain=self.global_config.system.domain,
+                        admin_email=self.global_config.system.admin_email,
+                        tags=["development", "local"],
+                        created_at=now,
+                        last_used=now,
+                    ),
+                    EnvironmentConfig(
+                        name="staging",
+                        description="Staging environment for pre-production testing",
+                        base_path=str(self.paths.base_path.parent / "staging"),
+                        domain=f"staging.{self.global_config.system.domain}",
+                        admin_email=self.global_config.system.admin_email,
+                        tags=["staging", "testing"],
+                        created_at=now,
+                        last_used=now,
+                        enabled=False,
+                    ),
+                    EnvironmentConfig(
+                        name="production",
+                        description="Production environment for live services",
+                        base_path=str(self.paths.base_path.parent / "production"),
+                        domain=self.global_config.system.domain.replace(
+                            "local.dev", "example.com"
+                        ),
+                        admin_email=self.global_config.system.admin_email,
+                        tags=["production", "live"],
+                        created_at=now,
+                        last_used=now,
+                        enabled=False,
+                    ),
+                ],
+            )
+            self.save_environments_config(default_environments)
+
     def validate_configuration(self) -> List[str]:
         """Validate all configuration and return list of errors."""
         errors = []
@@ -331,6 +394,62 @@ class ConfigurationManager:
                     errors.append(
                         f"Invalid email for user {user.username}: {user.email}"
                     )
+
+            # Validate environments configuration
+            try:
+                env_config = self.environments_config
+                env_names = {env.name for env in env_config.environments}
+
+                # Check current environment exists
+                current_env = env_config.current_environment
+                if current_env not in env_names:
+                    errors.append(f"Current environment '{current_env}' not found")
+
+                # Check environment configurations
+                for env in env_config.environments:
+                    # Validate email format
+                    if "@" not in env.admin_email:
+                        errors.append(
+                            f"Invalid admin email for environment {env.name}: "
+                            f"{env.admin_email}"
+                        )
+
+                    # Validate base path
+                    try:
+                        base_path = Path(env.base_path)
+                        if not base_path.is_absolute():
+                            errors.append(
+                                f"Environment {env.name} base_path must be "
+                                f"absolute: {env.base_path}"
+                            )
+                    except Exception:
+                        errors.append(
+                            f"Invalid base_path for environment {env.name}: "
+                            f"{env.base_path}"
+                        )
+
+                    # Validate domain format (basic check)
+                    if not env.domain or "." not in env.domain:
+                        errors.append(
+                            f"Invalid domain for environment {env.name}: {env.domain}"
+                        )
+
+                # Check for duplicate environment names
+                if len(env_names) != len(env_config.environments):
+                    errors.append("Duplicate environment names found")
+
+                # Check that at least one environment is enabled
+                enabled_envs = [env for env in env_config.environments if env.enabled]
+                if not enabled_envs:
+                    errors.append("At least one environment must be enabled")
+
+                # Check that current environment is enabled
+                current_env_obj = self.get_environment(env_config.current_environment)
+                if current_env_obj and not current_env_obj.enabled:
+                    errors.append(f"Current environment '{current_env}' is disabled")
+
+            except Exception as e:
+                errors.append(f"Environment configuration validation error: {e}")
 
         except (OSError, ValueError, KeyError) as e:
             errors.append(f"Configuration validation error: {e}")
@@ -376,3 +495,120 @@ class ConfigurationManager:
         except Exception as e:
             self.logger.error(f"Failed to create SSL certificates for {domain}: {e}")
             return False
+
+    def get_current_environment(self) -> EnvironmentConfig:
+        """Get the currently active environment configuration."""
+        current_name = self.environments_config.current_environment
+        for env in self.environments_config.environments:
+            if env.name == current_name:
+                return env
+        raise ValueError(f"Current environment '{current_name}' not found")
+
+    def list_environments(self) -> List[EnvironmentConfig]:
+        """List all available environments."""
+        return self.environments_config.environments
+
+    def get_environment(self, name: str) -> Optional[EnvironmentConfig]:
+        """Get environment by name."""
+        for env in self.environments_config.environments:
+            if env.name == name:
+                return env
+        return None
+
+    def add_environment(
+        self,
+        name: str,
+        description: str,
+        base_path: str,
+        domain: str,
+        admin_email: str,
+        tags: Optional[List[str]] = None,
+    ) -> EnvironmentConfig:
+        """Add a new environment."""
+        if self.get_environment(name):
+            raise ValueError(f"Environment '{name}' already exists")
+
+        now = datetime.now().isoformat()
+        env_config = EnvironmentConfig(
+            name=name,
+            description=description,
+            base_path=base_path,
+            domain=domain,
+            admin_email=admin_email,
+            tags=tags or [],
+            created_at=now,
+            last_used=now,
+        )
+
+        # Update configuration
+        config = self.environments_config
+        config.environments.append(env_config)
+        self.save_environments_config(config)
+
+        # Create directory structure for new environment
+        env_path = Path(base_path)
+        env_paths = ConfigurationPaths(base_path=env_path)
+        env_paths.ensure_directories()
+
+        self.logger.info(f"Created environment '{name}' at {base_path}")
+        return env_config
+
+    def remove_environment(self, name: str) -> None:
+        """Remove an environment."""
+        if name == self.environments_config.current_environment:
+            raise ValueError("Cannot remove the current environment")
+
+        config = self.environments_config
+        config.environments = [env for env in config.environments if env.name != name]
+        self.save_environments_config(config)
+        self.logger.info(f"Removed environment '{name}'")
+
+    def switch_environment(self, name: str) -> EnvironmentConfig:
+        """Switch to a different environment."""
+        env = self.get_environment(name)
+        if not env:
+            raise ValueError(f"Environment '{name}' not found")
+
+        if not env.enabled:
+            raise ValueError(f"Environment '{name}' is disabled")
+
+        # Update last used timestamp
+        env.last_used = datetime.now().isoformat()
+
+        # Update current environment
+        config = self.environments_config
+        config.current_environment = name
+        self.save_environments_config(config)
+
+        # Reinitialize configuration manager with new base path
+        self.paths = ConfigurationPaths(base_path=Path(env.base_path))
+        self.paths.ensure_directories()
+
+        # Clear configuration cache to reload from new environment
+        self.reload_config()
+
+        self.logger.info(f"Switched to environment '{name}' at {env.base_path}")
+        return env
+
+    def enable_environment(self, name: str) -> None:
+        """Enable an environment."""
+        env = self.get_environment(name)
+        if not env:
+            raise ValueError(f"Environment '{name}' not found")
+
+        env.enabled = True
+        self.save_environments_config(self.environments_config)
+        self.logger.info(f"Enabled environment '{name}'")
+
+    def disable_environment(self, name: str) -> None:
+        """Disable an environment."""
+        if name == self.environments_config.current_environment:
+            raise ValueError("Cannot disable the current environment")
+
+        env = self.get_environment(name)
+        if not env:
+            raise ValueError(f"Environment '{name}' not found")
+
+        env.enabled = False
+        self.save_environments_config(self.environments_config)
+        self.logger.info(f"Disabled environment '{name}'")

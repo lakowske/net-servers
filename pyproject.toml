@@ -132,6 +132,10 @@ module = "net_servers.cli"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = "net_servers.cli_environments"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
 module = "net_servers.cli_config"
 ignore_errors = true
 

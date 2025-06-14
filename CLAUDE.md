@@ -770,6 +770,245 @@ container_config = get_container_config("mail", use_config_manager=True)
 4. **Service Coordination**: Cross-service configuration consistency
 5. **Scalability**: Easy to add new services following the same pattern
 
+## Environment Management System
+
+The project includes a sophisticated environment management system that allows you to maintain multiple isolated environments (development, staging, production, etc.) with separate configurations and state.
+
+### Environment Architecture
+
+**Environment Isolation:**
+
+Each environment maintains its own complete directory structure:
+
+```
+/data/
+├── development/          # Development environment
+│   ├── config/
+│   ├── state/
+│   ├── logs/
+│   └── code/
+├── staging/              # Staging environment
+│   ├── config/
+│   ├── state/
+│   ├── logs/
+│   └── code/
+└── production/           # Production environment
+    ├── config/
+    ├── state/
+    ├── logs/
+    └── code/
+```
+
+**Environment Configuration (`environments.yaml`):**
+
+```yaml
+current_environment: development
+environments:
+  - name: development
+    description: Development environment for local testing
+    base_path: /Users/seth/.net-servers/development
+    domain: local.dev
+    admin_email: admin@local.dev
+    enabled: true
+    tags: [development, local]
+    created_at: '2024-06-14T10:30:00'
+    last_used: '2024-06-14T15:45:00'
+
+  - name: staging
+    description: Staging environment for pre-production testing
+    base_path: /Users/seth/.net-servers/staging
+    domain: staging.local.dev
+    admin_email: admin@local.dev
+    enabled: true
+    tags: [staging, testing, pre-production]
+    created_at: '2024-06-14T10:30:00'
+    last_used: '2024-06-10T14:20:00'
+
+  - name: production
+    description: Production environment for live services
+    base_path: /Users/seth/.net-servers/production
+    domain: example.com
+    admin_email: admin@example.com
+    enabled: false
+    tags: [production, live, critical]
+    created_at: '2024-06-14T10:30:00'
+    last_used: '2024-06-01T09:15:00'
+```
+
+### Environment Management Commands
+
+#### Listing and Information
+
+```bash
+# List all environments
+python -m net_servers.cli environments list
+
+# List in JSON format
+python -m net_servers.cli environments list --format json
+
+# Show only enabled environments
+python -m net_servers.cli environments list --enabled-only
+
+# Show current environment details
+python -m net_servers.cli environments current
+
+# Show detailed environment information
+python -m net_servers.cli environments info staging
+```
+
+#### Environment Lifecycle
+
+```bash
+# Create a new environment
+python -m net_servers.cli environments add testing \
+  --description "Testing environment for CI/CD" \
+  --base-path /data/testing \
+  --domain test.local.dev \
+  --admin-email admin@local.dev \
+  --tag testing --tag ci-cd --tag automated
+
+# Switch to different environment
+python -m net_servers.cli environments switch staging
+
+# Enable/disable environments
+python -m net_servers.cli environments enable production
+python -m net_servers.cli environments disable old-env
+
+# Remove environment (with confirmation)
+python -m net_servers.cli environments remove old-env
+python -m net_servers.cli environments remove old-env --force
+```
+
+#### Configuration Management
+
+```bash
+# Initialize default environments
+python -m net_servers.cli environments init
+
+# Force reinitialize (overwrites existing)
+python -m net_servers.cli environments init --force
+
+# Validate environment configuration
+python -m net_servers.cli environments validate
+```
+
+### Environment Features
+
+#### Automatic State Management
+
+When switching environments, the system automatically:
+
+1. **Updates current environment** in `environments.yaml`
+2. **Updates last used timestamp** for the target environment
+3. **Reinitializes configuration manager** with new base path
+4. **Creates directory structure** if it doesn't exist
+5. **Clears configuration cache** to reload from new environment
+
+#### Safety Features
+
+- **Cannot remove current environment**: Prevents accidental deletion
+- **Cannot disable current environment**: Ensures system stability
+- **Validation checks**: Comprehensive validation of all environment settings
+- **Confirmation prompts**: Interactive confirmation for destructive operations
+
+#### Environment Validation
+
+The validation system checks:
+
+- **Current environment exists** and is enabled
+- **Email format validation** for admin emails
+- **Absolute path validation** for base paths
+- **Domain format validation** (basic checks)
+- **No duplicate environment names**
+- **At least one environment enabled**
+
+### Integration with Container System
+
+When running containers with environment management:
+
+```python
+# Configuration manager automatically uses current environment
+config_manager = ConfigurationManager()
+current_env = config_manager.get_current_environment()
+
+# All operations use environment-specific paths:
+# - Base path: current_env.base_path
+# - Domain: current_env.domain
+# - Admin email: current_env.admin_email
+```
+
+### Development Workflow with Environments
+
+#### 1. Daily Development
+
+```bash
+# Start in development environment
+python -m net_servers.cli environments switch development
+
+# Build and test containers
+python -m net_servers.cli container build-all
+python -m net_servers.cli container run -c apache
+```
+
+#### 2. Pre-production Testing
+
+```bash
+# Switch to staging for integration testing
+python -m net_servers.cli environments switch staging
+
+# Deploy and test with staging data
+python -m net_servers.cli container run -c mail
+```
+
+#### 3. Production Deployment
+
+```bash
+# Switch to production environment
+python -m net_servers.cli environments switch production
+
+# Deploy with production configuration
+python -m net_servers.cli container start-all
+```
+
+### Environment Best Practices
+
+#### Naming Conventions
+
+- **development**: Local development work
+- **staging**: Pre-production testing
+- **production**: Live production services
+- **testing**: Automated testing environments
+- **feature-{name}**: Feature-specific environments
+
+#### Tag Organization
+
+Use tags to organize environments:
+
+- **Environment type**: `development`, `staging`, `production`
+- **Purpose**: `testing`, `ci-cd`, `demo`
+- **Criticality**: `critical`, `non-critical`
+- **Team**: `backend`, `frontend`, `qa`
+
+#### Directory Structure
+
+Recommended base path patterns:
+
+- **Development**: `~/.net-servers/development`
+- **Staging**: `/data/staging` or `~/.net-servers/staging`
+- **Production**: `/data/production`
+- **Testing**: `/tmp/net-servers-testing` (ephemeral)
+
+### Environment Migration
+
+When moving between systems or upgrading:
+
+1. **Export environment list**: Use `--format json` to get machine-readable config
+2. **Copy state directories**: Transfer entire base_path directories
+3. **Update paths**: Modify base_path values for new system
+4. **Validate configuration**: Run validation after migration
+
+The environment management system provides complete isolation between different deployment stages while maintaining operational simplicity and safety.
+
 ## Commit Message Guidelines
 
 - Use clear, concise commit messages that describe the change

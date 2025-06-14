@@ -185,6 +185,31 @@ class ServicesConfig(BaseModel):
     apache: ApacheServiceConfig = Field(default_factory=ApacheServiceConfig)
 
 
+class EnvironmentConfig(BaseModel):
+    """Environment configuration schema."""
+
+    name: str = Field(..., description="Environment name")
+    description: str = Field(..., description="Environment description")
+    base_path: str = Field(..., description="Base path for environment data")
+    domain: str = Field(..., description="Primary domain for this environment")
+    admin_email: str = Field(..., description="Admin email for this environment")
+    enabled: bool = Field(default=True, description="Environment enabled")
+    tags: List[str] = Field(default_factory=list, description="Environment tags")
+    created_at: str = Field(..., description="Creation timestamp")
+    last_used: str = Field(..., description="Last used timestamp")
+
+
+class EnvironmentsConfig(BaseModel):
+    """Environments configuration schema."""
+
+    current_environment: str = Field(
+        default="development", description="Currently active environment"
+    )
+    environments: List[EnvironmentConfig] = Field(
+        default_factory=list, description="List of environments"
+    )
+
+
 @dataclass
 class ConfigurationPaths:
     """Standard configuration paths."""

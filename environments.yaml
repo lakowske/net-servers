@@ -1,0 +1,52 @@
+current_environment: development
+environments:
+  - name: development
+    description: Development environment for local testing
+    base_path: /Users/seth/.net-servers/development
+    domain: local.dev
+    admin_email: admin@local.dev
+    enabled: true
+    tags:
+      - development
+      - local
+    created_at: '2024-06-14T10:30:00'
+    last_used: '2024-06-14T15:45:00'
+
+  - name: staging
+    description: Staging environment for pre-production testing
+    base_path: /Users/seth/.net-servers/staging
+    domain: staging.local.dev
+    admin_email: admin@local.dev
+    enabled: true
+    tags:
+      - staging
+      - testing
+      - pre-production
+    created_at: '2024-06-14T10:30:00'
+    last_used: '2024-06-10T14:20:00'
+
+  - name: production
+    description: Production environment for live services
+    base_path: /Users/seth/.net-servers/production
+    domain: example.com
+    admin_email: admin@example.com
+    enabled: false
+    tags:
+      - production
+      - live
+      - critical
+    created_at: '2024-06-14T10:30:00'
+    last_used: '2024-06-01T09:15:00'
+
+  - name: testing
+    description: Automated testing environment
+    base_path: /Users/seth/.net-servers/testing
+    domain: test.local.dev
+    admin_email: admin@local.dev
+    enabled: true
+    tags:
+      - testing
+      - ci-cd
+      - automated
+    created_at: '2024-06-14T10:30:00'
+    last_used: '2024-06-14T12:00:00'
