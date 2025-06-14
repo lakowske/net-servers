@@ -330,7 +330,7 @@ class ConfigurationManager:
                     EnvironmentConfig(
                         name="development",
                         description="Development environment for local testing",
-                        base_path=str(self.paths.base_path),
+                        base_path=str(self.paths.base_path / "development"),
                         domain=self.global_config.system.domain,
                         admin_email=self.global_config.system.admin_email,
                         tags=["development", "local"],
@@ -340,7 +340,7 @@ class ConfigurationManager:
                     EnvironmentConfig(
                         name="staging",
                         description="Staging environment for pre-production testing",
-                        base_path=str(self.paths.base_path.parent / "staging"),
+                        base_path=str(self.paths.base_path / "staging"),
                         domain=f"staging.{self.global_config.system.domain}",
                         admin_email=self.global_config.system.admin_email,
                         tags=["staging", "testing"],
@@ -349,9 +349,20 @@ class ConfigurationManager:
                         enabled=False,
                     ),
                     EnvironmentConfig(
+                        name="testing",
+                        description="Testing environment for integration tests",
+                        base_path=str(self.paths.base_path / "testing"),
+                        domain=f"testing.{self.global_config.system.domain}",
+                        admin_email=self.global_config.system.admin_email,
+                        tags=["testing", "integration", "ci-cd"],
+                        created_at=now,
+                        last_used=now,
+                        enabled=False,
+                    ),
+                    EnvironmentConfig(
                         name="production",
                         description="Production environment for live services",
-                        base_path=str(self.paths.base_path.parent / "production"),
+                        base_path=str(self.paths.base_path / "production"),
                         domain=self.global_config.system.domain.replace(
                             "local.dev", "example.com"
                         ),

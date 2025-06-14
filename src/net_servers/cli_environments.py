@@ -259,16 +259,97 @@ def show_environment_info(name: str) -> None:
 def init_environments(force: bool) -> None:
     """Initialize environments configuration with defaults."""
     try:
-        config_manager = _get_config_manager()
+        # Create minimal base directory structure for environments config only
+        base_path = Path.home() / ".net-servers"
+        config_path = base_path / "config"
 
         # Check if environments.yaml already exists
-        env_config_path = config_manager.paths.config_path / "environments.yaml"
+        env_config_path = config_path / "environments.yaml"
         if env_config_path.exists() and not force:
             click.echo("Environments configuration already exists.")
             click.echo("Use --force to reinitialize.")
             return
 
-        # Initialize with defaults
+        # Create only the config directory needed for environments.yaml
+        config_path.mkdir(parents=True, exist_ok=True)
+
+        # Create environments configuration
+        from datetime import datetime
+
+        from net_servers.config.schemas import EnvironmentConfig, EnvironmentsConfig
+
+        now = datetime.now().isoformat()
+        default_environments = EnvironmentsConfig(
+            current_environment="development",
+            environments=[
+                EnvironmentConfig(
+                    name="development",
+                    description="Development environment for local testing",
+                    base_path=str(base_path / "development"),
+                    domain="local.dev",
+                    admin_email="admin@local.dev",
+                    tags=["development", "local"],
+                    created_at=now,
+                    last_used=now,
+                ),
+                EnvironmentConfig(
+                    name="staging",
+                    description="Staging environment for pre-production testing",
+                    base_path=str(base_path / "staging"),
+                    domain="staging.local.dev",
+                    admin_email="admin@local.dev",
+                    tags=["staging", "testing"],
+                    created_at=now,
+                    last_used=now,
+                    enabled=False,
+                ),
+                EnvironmentConfig(
+                    name="testing",
+                    description="Testing environment for integration tests",
+                    base_path=str(base_path / "testing"),
+                    domain="testing.local.dev",
+                    admin_email="admin@local.dev",
+                    tags=["testing", "integration", "ci-cd"],
+                    created_at=now,
+                    last_used=now,
+                    enabled=False,
+                ),
+                EnvironmentConfig(
+                    name="production",
+                    description="Production environment for live services",
+                    base_path=str(base_path / "production"),
+                    domain="example.com",
+                    admin_email="admin@local.dev",
+                    tags=["production", "live"],
+                    created_at=now,
+                    last_used=now,
+                    enabled=False,
+                ),
+            ],
+        )
+
+        # Save environments config
+        from net_servers.config.schemas import save_yaml_config
+
+        save_yaml_config(default_environments, env_config_path)
+
+        # Create directory structure for all environments
+        from net_servers.config.schemas import ConfigurationPaths
+
+        for env in default_environments.environments:
+            env_paths = ConfigurationPaths(base_path=Path(env.base_path))
+            env_paths.ensure_directories()
+
+        # Initialize the current environment's configuration files
+        # Use the development environment's base path
+        dev_env = next(
+            env
+            for env in default_environments.environments
+            if env.name == "development"
+        )
+        from net_servers.config.manager import ConfigurationManager
+
+        config_manager = ConfigurationManager(dev_env.base_path)
         config_manager.initialize_default_configs()
         click.echo("Initialized environments configuration with defaults:")
 
