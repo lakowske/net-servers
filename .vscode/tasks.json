@@ -1214,6 +1214,128 @@
             },
             "problemMatcher": [],
             "detail": "Stop production containers and start testing containers"
+        },
+        // ============ SSL/TLS Certificate Management ============
+        {
+            "label": "Certificates: Setup (Staging)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "certificates",
+                "setup"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Setup staging SSL certificates for all configured domains"
+        },
+        {
+            "label": "Certificates: Setup (Production)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "certificates",
+                "setup",
+                "--production"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Setup production SSL certificates for all configured domains"
+        },
+        {
+            "label": "Certificates: List",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "certificates",
+                "list",
+                "--detailed"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "List all managed SSL certificates with details"
+        },
+        {
+            "label": "Certificates: Renew All",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "certificates",
+                "renew",
+                "--all"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Renew all SSL certificates that need renewal"
+        },
+        {
+            "label": "Certificates: Create Self-Signed",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "-m",
+                "net_servers.cli",
+                "certificates",
+                "provision",
+                "-d",
+                "local.dev",
+                "--self-signed",
+                "--san",
+                "mail.local.dev",
+                "--san",
+                "www.local.dev",
+                "--force"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": [],
+            "detail": "Create self-signed certificate for development"
         }
     ]
 }

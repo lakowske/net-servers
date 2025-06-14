@@ -1,22 +1,26 @@
 # Clean Python Project Template
 
 ## Project Purpose
+
 This is a template for creating clean, professional Python projects that incorporate industry best practices from the start. It serves as a foundation for new Python projects with all the essential development tools and quality assurance measures pre-configured.
 
 ## Clean Code Practices Implemented
 
 ### Code Quality & Standards
+
 - **Black** - Automatic code formatting with 88 character line length
 - **Flake8** - Comprehensive linting with Google docstring conventions
 - **Pre-commit hooks** - Automated quality checks before every commit
 
 ### Testing & Coverage
+
 - **Pytest** - Modern testing framework with proper project structure
-- **Coverage reporting** - Currently at 40% (temporary while building config system), target 80%
+- **Coverage reporting** - target 80%
 - **HTML coverage reports** - Generated in `htmlcov/` directory
 - **Integration testing** - Structured test organization
 
 ### Git Workflow
+
 - **Pre-commit configuration** - Ensures code quality on every commit
 - **Automated checks** for:
   - Trailing whitespace removal
@@ -28,6 +32,7 @@ This is a template for creating clean, professional Python projects that incorpo
   - Test coverage (Pytest with 80% minimum)
 
 ## Project Structure
+
 ```
 clean-python/
 ├── actions/          # Project build and automation scripts
@@ -41,6 +46,7 @@ clean-python/
 ```
 
 ## Development Commands
+
 - `pytest --cov=. --cov-report=term-missing --cov-fail-under=80 --cov-report=html` - Run tests with coverage
 - `black .` - Format code
 - `flake8` - Run linting
@@ -52,6 +58,7 @@ clean-python/
 This project provides a comprehensive CLI for managing containerized network services.
 
 ### Main CLI Structure
+
 ```bash
 python -m net_servers.cli [OPTIONS] COMMAND [ARGS]...
 ```
@@ -59,6 +66,7 @@ python -m net_servers.cli [OPTIONS] COMMAND [ARGS]...
 ### Available Commands
 
 #### Container Management
+
 ```bash
 # List available container configurations
 python -m net_servers.cli container list-configs
@@ -89,6 +97,7 @@ python -m net_servers.cli container test -c apache
 ```
 
 #### Configuration Management
+
 ```bash
 # Initialize configuration system
 python -m net_servers.cli config init
@@ -116,18 +125,21 @@ python -m net_servers.cli config daemon --interval 5
 ### Container Services
 
 #### Apache HTTP Server
+
 - **Purpose**: Development web server
 - **Default Port**: 8080 (mapped to container port 80)
 - **Access**: http://localhost:8080
 - **Configuration**: `docker/apache/config/`
 
 #### Mail Server (Postfix + Dovecot)
+
 - **Purpose**: SMTP/IMAP/POP3 email services
 - **Ports**: 25 (SMTP), 143 (IMAP), 110 (POP3), 587 (SMTP-TLS), 993 (IMAPS), 995 (POP3S)
 - **Configuration**: Multi-service container with Supervisor
 - **Authentication**: Custom user management system
 
 #### DNS Server (BIND9)
+
 - **Purpose**: Local DNS resolution and zone management
 - **Default Port**: 53 (use 5353 on macOS to avoid conflicts)
 - **Configuration**: Dynamic zone file generation
@@ -140,6 +152,7 @@ This section addresses common infrastructure issues that new macOS users might e
 ### Prerequisites
 
 1. **Podman Installation**
+
    ```bash
    brew install podman
    podman machine init
@@ -147,6 +160,7 @@ This section addresses common infrastructure issues that new macOS users might e
    ```
 
 2. **Python Environment**
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate
@@ -161,9 +175,11 @@ This section addresses common infrastructure issues that new macOS users might e
 ### Common macOS Issues and Solutions
 
 #### 1. DNS Port 53 Conflicts
+
 **Issue**: DNS container fails with "port 53 already in use"
 **Cause**: macOS runs mDNSResponder on port 53
 **Solution**: Use alternative port mapping
+
 ```bash
 # Instead of default port 53
 python -m net_servers.cli container run -c dns --port-mapping 5353:53
@@ -173,8 +189,10 @@ dig @127.0.0.1 -p 5353 local.dev
 ```
 
 #### 2. Container Build Requirements
+
 **Issue**: Integration tests fail because container images don't exist
 **Solution**: Build containers before running tests
+
 ```bash
 # Build all containers
 python -m net_servers.cli container build-all
@@ -186,8 +204,10 @@ python -m net_servers.cli container build -c dns
 ```
 
 #### 3. Container Name Conflicts
+
 **Issue**: "Container name already in use" errors
 **Solution**: Clean up existing containers
+
 ```bash
 # Stop all containers
 python -m net_servers.cli container stop-all
@@ -200,7 +220,9 @@ python -m net_servers.cli container clean-all
 ```
 
 #### 4. Port Accessibility Testing
+
 **Quick connectivity tests:**
+
 ```bash
 # Test Apache (HTTP)
 curl -f http://localhost:8080
@@ -215,17 +237,20 @@ dig @127.0.0.1 -p 5353 local.dev
 ### Integration Testing on macOS
 
 #### Running Tests Successfully
+
 1. **Build containers first**: `python -m net_servers.cli container build-all`
 2. **Clean up existing containers**: `python -m net_servers.cli container clean-all`
 3. **Run tests with proper ports**: Tests automatically handle port conflicts
 
 #### Expected Test Results
+
 - ✅ **Unit tests**: All 196+ tests should pass
 - ✅ **Basic container functionality**: Container startup and basic connectivity
 - ⚠️ **DNS resolution tests**: May fail due to system resolver conflicts (expected)
 - ✅ **Apache/Mail services**: Should work properly with port mapping
 
 #### Troubleshooting Failed Tests
+
 ```bash
 # Check container logs
 python -m net_servers.cli container logs -c mail
@@ -240,6 +265,7 @@ python -m net_servers.cli container test -c apache
 ### Development Workflow on macOS
 
 1. **Initial Setup**
+
    ```bash
    git clone <repo>
    cd net-servers
@@ -250,6 +276,7 @@ python -m net_servers.cli container test -c apache
    ```
 
 2. **Build and Test**
+
    ```bash
    python -m net_servers.cli container build-all
    pytest tests/test_*.py  # Run unit tests
@@ -263,7 +290,9 @@ python -m net_servers.cli container test -c apache
    ```
 
 ## Quality Gates
+
 Every commit must pass:
+
 1. Code formatting (Black)
 2. Linting checks (Flake8)
 3. All tests passing
@@ -277,9 +306,11 @@ This template ensures that code quality, testing, and documentation standards ar
 ## Coding Standards and Common Issues
 
 ### Flake8 F-String Guidelines
+
 Flake8 has specific rules around f-strings that can cause unexpected violations:
 
 **Issue**: Flake8 E231 (missing whitespace after ':') and F541 (f-string missing placeholders)
+
 ```python
 # ❌ Flake8 violations
 port_mapping = f"{self.config.port}:80"  # E231: missing space after ':'
@@ -287,6 +318,7 @@ cmd.extend(["-p", f"25:25"])  # F541: f-string without variables
 ```
 
 **Solution**: Break f-strings at colons and use regular strings for static values
+
 ```python
 # ✅ Flake8 compliant
 port_mapping = f"{self.config.port}" + ":80"  # Split at colon
@@ -295,11 +327,169 @@ cmd.extend(["-p", "25:25"])  # Regular string for static values
 
 **General Rule**: When f-strings contain colons followed by static content, break the string at the colon and concatenate with a regular string to avoid flake8 parsing issues.
 
+### Additional F-String Colon Issues
+
+**URL/Port Formatting Issue**: When creating URLs or port mappings with f-strings, flake8 E231 may still trigger even with proper concatenation.
+
+```python
+# ❌ Still causes E231 issues
+url = f"http://localhost:{port}"
+```
+
+**Best Solution**: Use string concatenation for the colon to avoid flake8 parsing the `:` as an operator:
+
+```python
+# ✅ Flake8 compliant - avoids E231 colon parsing issues
+url = "http://localhost" + ":" + f"{port}"
+# or
+url = f"http://localhost" + ":" + f"{port}"  # If first part needs variables
+```
+
+**Alternative**: Use `# noqa: E231` comment for legitimate cases where colons are part of URLs/addresses.
+
+## SSL/TLS Certificate Management
+
+The project includes automatic SSL/TLS certificate management for all testing containers. This ensures that HTTPS and mail SSL services work out of the box.
+
+### Automatic Certificate Generation
+
+When starting testing containers, the system automatically:
+
+1. **Creates self-signed certificates** for the configured domain (default: `local.dev`)
+2. **Mounts certificates** into containers at `/data/state/certificates/{domain}/`
+3. **Enables SSL services** with proper environment variables
+4. **Configures fallback scenarios** when certificates are missing
+
+### SSL-Enabled Services
+
+#### Apache HTTPS
+
+- **HTTP**: `http://localhost:8080` (redirects to HTTPS)
+- **HTTPS**: `https://localhost:8443`
+- **Features**: HTTP to HTTPS redirect, security headers, self-signed certificates
+
+#### Mail SSL/TLS
+
+- **SMTP TLS**: `localhost:5870` (port 587 in container)
+- **IMAPS**: `localhost:9993` (port 993 in container)
+- **POP3S**: `localhost:9995` (port 995 in container)
+- **Features**: STARTTLS support, SSL/TLS encryption, graceful fallback
+
+### Certificate Management Commands
+
+```bash
+# Provision self-signed certificate for a domain
+python -m net_servers.cli certificates provision-self-signed --domain local.dev
+
+# Provision Let's Encrypt certificate (requires public domain and DNS)
+python -m net_servers.cli certificates provision-letsencrypt --domain example.com --email admin@example.com
+
+# List available certificates
+python -m net_servers.cli certificates list
+
+# View certificate information
+python -m net_servers.cli certificates info --domain local.dev
+```
+
+### Certificate Storage
+
+Certificates are stored in the configuration directory:
+
+```
+~/.net-servers/state/certificates/
+├── local.dev/
+│   ├── cert.pem          # Certificate file
+│   ├── privkey.pem       # Private key
+│   └── fullchain.pem     # Full certificate chain
+└── example.com/
+    ├── cert.pem
+    ├── privkey.pem
+    └── fullchain.pem
+```
+
+### Development vs Production
+
+**Testing Containers** (default):
+
+- Automatically generate self-signed certificates
+- SSL enabled by default for Apache and Mail services
+- Certificates mounted as volumes
+- Graceful fallback when certificates missing
+
+**Production Containers**:
+
+- Use existing certificates or Let's Encrypt
+- Requires proper DNS setup for Let's Encrypt
+- Manual certificate provisioning
+- Production-ready SSL configuration
+
+### SSL Testing
+
+The project includes comprehensive SSL/TLS integration tests:
+
+```bash
+# Run SSL/TLS test suite
+python -m pytest tests/integration/test_ssl_tls.py -v
+
+# Test individual SSL components
+python -m pytest tests/integration/test_ssl_tls.py::TestApacheSSL -v
+python -m pytest tests/integration/test_ssl_tls.py::TestMailSSL -v
+```
+
+**Test Coverage**:
+
+- Apache HTTPS functionality (HTTP redirect, content serving, certificate validation)
+- Mail SSL/TLS services (SMTP STARTTLS, IMAPS, POP3S)
+- Certificate provisioning and validation
+- SSL fallback scenarios for missing certificates
+
+### Troubleshooting SSL Issues
+
+**Common Issues and Solutions**:
+
+1. **"SSL certificates not found"**
+
+   ```bash
+   # Check certificate directory
+   ls -la ~/.net-servers/state/certificates/local.dev/
+
+   # Regenerate certificates
+   python -m net_servers.cli certificates provision-self-signed --domain local.dev
+   ```
+
+2. **"Certificate verification failed"**
+
+   - Use `-k` flag with curl for self-signed certificates
+   - Add certificate to system trust store for production
+
+3. **"Connection refused on SSL ports"**
+
+   ```bash
+   # Check container logs
+   python -m net_servers.cli container logs -c apache
+
+   # Verify SSL environment variables
+   podman exec net-servers-apache-testing printenv | grep SSL
+   ```
+
+4. **"Mail SSL services not working"**
+   ```bash
+   # Test SMTP TLS manually
+   python -c "
+   import smtplib
+   server = smtplib.SMTP('localhost', 5870)
+   server.starttls()
+   print('SMTP TLS working!')
+   server.quit()
+   "
+   ```
+
 ## Adding New Container Services
 
 This project supports containerized services with automated build, test, and deployment workflows. Follow this systematic process when adding new services:
 
 ### 1. Container Setup
+
 - **Create service directory**: `docker/{service-name}/`
 - **Write Dockerfile**: Use existing services as templates (e.g., `docker/apache/Dockerfile`)
 - **Use consistent base image**: `debian:12-slim` for efficiency and consistency
@@ -307,6 +497,7 @@ This project supports containerized services with automated build, test, and dep
 - **Create startup script**: Custom script for multi-service initialization
 
 ### 2. CLI Integration
+
 - **Update container config**: Add service to `src/net_servers/config/containers.py`
 - **Test CLI commands**: Verify build, run, stop, and clean operations work
 - **Example commands**:
@@ -317,6 +508,7 @@ This project supports containerized services with automated build, test, and dep
   ```
 
 ### 3. Integration Testing
+
 - **Create test file**: `tests/integration/test_{service-name}.py`
 - **Use session-scoped fixtures**: Reuse containers across tests for performance
 - **Test systematically**:
@@ -330,17 +522,21 @@ This project supports containerized services with automated build, test, and dep
 - **Use 2-second timeouts**: For fast local testing
 
 ### 4. VS Code Tasks Integration
+
 - **Update `.vscode/tasks.json`**: Add build, run, and test tasks for new service
 - **Task naming pattern**: `{Service} - {Action}` (e.g., "Mail - Build", "Mail - Test")
 - **Task dependencies**: Ensure proper build → run → test sequence
 
 ### 5. Quality Assurance
+
 - **Run pre-commit checks**: Ensure new code passes all quality gates
 - **Test coverage**: Add unit tests if new business logic is introduced
 - **Documentation**: Update README or service-specific docs as needed
 
 ### 6. Debugging Process
+
 When tests fail:
+
 1. **Check container logs**: `podman logs {container-name}`
 2. **Exec into container**: `podman exec -it {container-name} bash`
 3. **Inspect config files**: Verify all configuration is correctly applied
@@ -348,7 +544,9 @@ When tests fail:
 5. **Check authentication**: Verify user/credential setup if applicable
 
 ### Example: Mail Service Implementation
+
 The mail service demonstrates this complete workflow:
+
 - **Multi-service container**: Postfix (SMTP) + Dovecot (IMAP/POP3) + Supervisor
 - **Configuration management**: Separate config files for each service
 - **User credential setup**: Dynamic user creation in startup script
@@ -363,6 +561,7 @@ This project includes a comprehensive configuration management system designed f
 ### Configuration Architecture
 
 **Directory Structure:**
+
 ```
 /data/
 ├── config/                    # Central configuration store
@@ -383,10 +582,12 @@ This project includes a comprehensive configuration management system designed f
 ### Volume Management
 
 **Development vs Production Modes:**
+
 - **Development**: Code volumes are read-write for live editing
 - **Production**: Code volumes can be read-only for security
 
 **Volume Types:**
+
 - **Configuration volumes**: Persistent settings and schema definitions
 - **State volumes**: Runtime data like mailboxes, DNS zones, certificates
 - **Code volumes**: Source code for development iteration
@@ -395,6 +596,7 @@ This project includes a comprehensive configuration management system designed f
 ### Configuration Schema
 
 **Global Configuration (`global.yaml`):**
+
 ```yaml
 system:
   domain: "local.dev"
@@ -403,6 +605,7 @@ system:
 ```
 
 **User Configuration (`users.yaml`):**
+
 ```yaml
 users:
   - username: "admin"
@@ -413,6 +616,7 @@ users:
 ```
 
 **Domain Configuration (`domains.yaml`):**
+
 ```yaml
 domains:
   - name: "local.dev"
@@ -425,11 +629,13 @@ domains:
 ### Configuration-to-Service Pattern
 
 **Workflow:**
+
 1. **Configuration Change** → Parse & Validate → Generate Service Files → Apply Changes → Reload Services
 2. **Cross-service consistency** through centralized domain and user management
 3. **Service coordination** via shared configuration schemas
 
 **Example Implementation:**
+
 ```python
 # Enable configuration management
 config = get_container_config("mail", use_config_manager=True)
@@ -443,12 +649,14 @@ config = get_container_config("mail", use_config_manager=True)
 ### Usage Patterns
 
 **Basic Container Operations (Backward Compatible):**
+
 ```bash
 python -m net_servers.cli build -c mail    # Uses basic config
 python -m net_servers.cli run -c mail      # No persistent volumes
 ```
 
 **Advanced Configuration Management:**
+
 ```python
 from net_servers.config.manager import ConfigurationManager
 

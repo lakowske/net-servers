@@ -31,6 +31,15 @@ class SecurityConfig(BaseModel):
     cert_path: str = Field(
         default="/data/state/certificates", description="Certificate storage path"
     )
+    letsencrypt_email: str = Field(
+        default="admin@local.dev", description="Email for Let's Encrypt registration"
+    )
+    auto_provision_certs: bool = Field(
+        default=True, description="Automatically provision SSL certificates"
+    )
+    cert_renewal_enabled: bool = Field(
+        default=True, description="Enable automatic certificate renewal"
+    )
 
 
 class GlobalConfig(BaseModel):
@@ -105,6 +114,22 @@ class MailServiceConfig(BaseModel):
         default_factory=list, description="Virtual domains"
     )
     relay_domains: List[str] = Field(default_factory=list, description="Relay domains")
+    tls_enabled: bool = Field(default=True, description="Enable TLS for mail services")
+    ssl_cert_file: str = Field(
+        default="/data/state/certificates/local.dev/cert.pem",
+        description="SSL certificate file",
+    )
+    ssl_key_file: str = Field(
+        default="/data/state/certificates/local.dev/privkey.pem",
+        description="SSL private key file",
+    )
+    ssl_chain_file: str = Field(
+        default="/data/state/certificates/local.dev/fullchain.pem",
+        description="SSL certificate chain file",
+    )
+    require_tls: bool = Field(
+        default=False, description="Require TLS for all connections"
+    )
 
 
 class DnsServiceConfig(BaseModel):
@@ -136,6 +161,19 @@ class ApacheServiceConfig(BaseModel):
     )
     modules: List[str] = Field(
         default_factory=list, description="Apache modules to enable"
+    )
+    ssl_enabled: bool = Field(default=True, description="Enable SSL/HTTPS")
+    ssl_cert_file: str = Field(
+        default="/data/state/certificates/local.dev/cert.pem",
+        description="SSL certificate file",
+    )
+    ssl_key_file: str = Field(
+        default="/data/state/certificates/local.dev/privkey.pem",
+        description="SSL private key file",
+    )
+    ssl_chain_file: str = Field(
+        default="/data/state/certificates/local.dev/fullchain.pem",
+        description="SSL certificate chain file",
     )
 
 

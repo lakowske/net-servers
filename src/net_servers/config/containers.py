@@ -116,7 +116,16 @@ def get_container_config(
     # Enhance with configuration management if enabled
     if use_config_manager:
         try:
-            config_manager = ConfigurationManager()
+            # Use a local data directory for testing if /data doesn't exist
+            import os
+
+            base_path = (
+                "/data"
+                if os.path.exists("/data")
+                else os.path.expanduser("~/.net-servers")
+            )
+            config_manager = ConfigurationManager(base_path)
+            config_manager.initialize_default_configs()
             config = config_manager.enhance_container_config(
                 config, name, development_mode
             )

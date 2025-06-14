@@ -3,7 +3,7 @@
 import json
 import logging
 import sys
-from typing import Optional
+from typing import List, Optional
 
 import click
 
@@ -18,6 +18,95 @@ def setup_logging(verbose: bool = False) -> None:
     logging.basicConfig(
         level=level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
+
+
+def _display_service_info(container_config, port_mapping: Optional[str] = None) -> None:
+    """Display port mappings and service URLs for a started container."""
+    click.echo("Port Mappings:")
+
+    # Handle custom port mapping
+    if port_mapping:
+        host_port, container_port = port_mapping.split(":")
+        click.echo(f"  {host_port} -> {container_port}")
+
+        # Generate service URL based on container type
+        service_name = _get_service_name(container_config.image_name)
+        if service_name == "apache":
+            click.echo("Service URLs:")
+            click.echo("  HTTP: http://localhost" + ":" + f"{host_port}")
+            if container_port == "443":
+                click.echo("  HTTPS: https://localhost" + ":" + f"{host_port}")
+        return
+
+    # Display configured port mappings
+    if container_config.port_mappings:
+        for mapping in container_config.port_mappings:
+            protocol_suffix = (
+                f"/{mapping.protocol}" if mapping.protocol != "tcp" else ""
+            )
+            click.echo(
+                f"  {mapping.host_port} -> {mapping.container_port}{protocol_suffix}"
+            )
+
+        # Generate service URLs
+        service_name = _get_service_name(container_config.image_name)
+        service_urls = _generate_service_urls(
+            service_name, container_config.port_mappings
+        )
+        if service_urls:
+            click.echo("Service URLs:")
+            for url in service_urls:
+                click.echo(f"  {url}")
+    else:
+        # Fallback to legacy single port display
+        click.echo(f"  {container_config.port} -> (container port)")
+
+
+def _get_service_name(image_name: str) -> str:
+    """Extract service name from image name."""
+    if "apache" in image_name:
+        return "apache"
+    elif "mail" in image_name:
+        return "mail"
+    elif "dns" in image_name:
+        return "dns"
+    return "unknown"
+
+
+def _generate_service_urls(service_name: str, port_mappings) -> List[str]:
+    """Generate service URLs based on service type and port mappings."""
+    urls = []
+
+    if service_name == "apache":
+        for mapping in port_mappings:
+            if mapping.container_port == 80:
+                urls.append("HTTP: http://localhost" + ":" + f"{mapping.host_port}")
+            elif mapping.container_port == 443:
+                urls.append("HTTPS: https://localhost" + ":" + f"{mapping.host_port}")
+
+    elif service_name == "mail":
+        for mapping in port_mappings:
+            if mapping.container_port == 25:
+                urls.append("SMTP: localhost" + ":" + f"{mapping.host_port}")
+            elif mapping.container_port == 143:
+                urls.append("IMAP: localhost" + ":" + f"{mapping.host_port}")
+            elif mapping.container_port == 110:
+                urls.append("POP3: localhost" + ":" + f"{mapping.host_port}")
+            elif mapping.container_port == 993:
+                urls.append("IMAPS: localhost" + ":" + f"{mapping.host_port}")
+            elif mapping.container_port == 995:
+                urls.append("POP3S: localhost" + ":" + f"{mapping.host_port}")
+            elif mapping.container_port == 587:
+                urls.append("SMTP-TLS: localhost" + ":" + f"{mapping.host_port}")
+
+    elif service_name == "dns":
+        for mapping in port_mappings:
+            if mapping.container_port == 53:
+                urls.append(
+                    "DNS: localhost" + ":" + f"{mapping.host_port} ({mapping.protocol})"
+                )
+
+    return urls
 
 
 @click.group()
@@ -93,7 +182,7 @@ def run(
     """Run container."""
     try:
         container_config = get_container_config(
-            config, use_config_manager=False, production_mode=production
+            config, use_config_manager=True, production_mode=production
         )
 
         # Apply port override
@@ -114,6 +203,7 @@ def run(
 
         if detached:
             click.echo(f"Container {container_config.container_name} started")
+            _display_service_info(container_config, port_mapping)
 
     except ValueError as e:
         click.echo(f"Error: {e}", err=True)
@@ -304,7 +394,7 @@ def start_all(detached: bool, production: bool) -> None:
     for name, _ in configs.items():
         click.echo(f"Starting {name}...")
         container_config = get_container_config(
-            name, use_config_manager=False, production_mode=production
+            name, use_config_manager=True, production_mode=production
         )
         manager = ContainerManager(container_config)
         result = manager.run(detached=detached)
@@ -319,6 +409,7 @@ def start_all(detached: bool, production: bool) -> None:
             click.echo(f"Failed to start {name}", err=True)
         else:
             click.echo(f"Container {container_config.container_name} started")
+            _display_service_info(container_config)
 
     if failed:
         click.echo(f"Failed to start: {', '.join(failed)}", err=True)
@@ -569,6 +660,11 @@ def test_integration(
 
 # Add configuration commands to main CLI
 cli.add_command(config)
+
+# Add certificate commands to main CLI
+from net_servers.cli_certificates import certificates  # noqa: E402
+
+cli.add_command(certificates)
 
 
 if __name__ == "__main__":

@@ -602,3 +602,191 @@ class TestContainerConfigs:
             # Should not have enhanced volumes/environment
             assert len(config.volumes) == 0
             assert len(config.environment) == 0
+
+
+class TestPortMapping:
+    """Test PortMapping functionality."""
+
+    def test_port_mapping_to_podman_arg_tcp(self) -> None:
+        """Test PortMapping to_podman_arg for TCP."""
+        from net_servers.actions.container import PortMapping
+
+        mapping = PortMapping(host_port=8080, container_port=80, protocol="tcp")
+        result = mapping.to_podman_arg()
+
+        assert result == "8080:80/tcp"
+
+    def test_port_mapping_to_podman_arg_udp(self) -> None:
+        """Test PortMapping to_podman_arg for UDP."""
+        from net_servers.actions.container import PortMapping
+
+        mapping = PortMapping(host_port=5353, container_port=53, protocol="udp")
+        result = mapping.to_podman_arg()
+
+        assert result == "5353:53/udp"
+
+    def test_port_mapping_default_protocol(self) -> None:
+        """Test PortMapping default protocol."""
+        from net_servers.actions.container import PortMapping
+
+        mapping = PortMapping(host_port=8080, container_port=80)
+        result = mapping.to_podman_arg()
+
+        assert result == "8080:80/tcp"
+
+
+class TestVolumeMountMethods:
+    """Test VolumeMount functionality."""
+
+    def test_volume_mount_to_podman_arg_read_write(self) -> None:
+        """Test VolumeMount to_podman_arg for read-write."""
+        from net_servers.actions.container import VolumeMount
+
+        volume = VolumeMount(
+            host_path="/host/path", container_path="/container/path", read_only=False
+        )
+        result = volume.to_podman_arg()
+
+        assert result == "/host/path:/container/path"
+
+    def test_volume_mount_to_podman_arg_read_only(self) -> None:
+        """Test VolumeMount to_podman_arg for read-only."""
+        from net_servers.actions.container import VolumeMount
+
+        volume = VolumeMount(
+            host_path="/host/path", container_path="/container/path", read_only=True
+        )
+        result = volume.to_podman_arg()
+
+        assert result == "/host/path:/container/path:ro"
+
+    def test_volume_mount_default_read_only(self) -> None:
+        """Test VolumeMount default read_only."""
+        from net_servers.actions.container import VolumeMount
+
+        volume = VolumeMount(host_path="/host/path", container_path="/container/path")
+        result = volume.to_podman_arg()
+
+        assert result == "/host/path:/container/path"
+
+    def test_volume_mount_with_spaces_in_paths(self) -> None:
+        """Test VolumeMount with spaces in paths."""
+        from net_servers.actions.container import VolumeMount
+
+        volume = VolumeMount(
+            host_path="/host path/with spaces",
+            container_path="/container path/with spaces",
+        )
+        result = volume.to_podman_arg()
+
+        assert result == "/host path/with spaces:/container path/with spaces"
+
+
+class TestContainerConfigPostInit:
+    """Test ContainerConfig __post_init__ functionality."""
+
+    def test_container_config_auto_generate_name(self) -> None:
+        """Test auto-generation of container name."""
+        from net_servers.actions.container import ContainerConfig
+
+        config = ContainerConfig(image_name="registry/org/my-service:latest")
+
+        assert config.container_name == "my-service-latest"
+
+    def test_container_config_manual_name_not_overridden(self) -> None:
+        """Test manual container name is not overridden."""
+        from net_servers.actions.container import ContainerConfig
+
+        config = ContainerConfig(
+            image_name="registry/org/my-service:latest", container_name="custom-name"
+        )
+
+        assert config.container_name == "custom-name"
+
+    def test_container_config_simple_image_name(self) -> None:
+        """Test simple image name without registry."""
+        from net_servers.actions.container import ContainerConfig
+
+        config = ContainerConfig(image_name="simple-service")
+
+        assert config.container_name == "simple-service"
+
+
+class TestContainerManagerRunEdgeCases:
+    """Test ContainerManager run method edge cases."""
+
+    def test_run_mail_container_multiple_ports(self) -> None:
+        """Test running mail container with multiple port mappings."""
+        from net_servers.actions.container import ContainerConfig, ContainerManager
+
+        config = ContainerConfig(
+            image_name="net-servers-mail", container_name="test-mail"
+        )
+
+        manager = ContainerManager(config)
+
+        with patch.object(manager, "_run_command") as mock_run:
+            mock_run.return_value = ContainerResult(True, "container_id", "", 0)
+
+            result = manager.run()
+
+            # Verify mail-specific port mappings were added
+            assert result.success
+            assert mock_run.called
+            call_args = mock_run.call_args[0][0]  # Get the command arguments
+
+            # Should include multiple -p flags for mail ports
+            port_flags = [i for i, arg in enumerate(call_args) if arg == "-p"]
+            assert (
+                len(port_flags) >= 6
+            )  # SMTP, IMAP, POP3, IMAPS, POP3S, SMTP submission
+
+    def test_run_dns_container_port_mapping(self) -> None:
+        """Test running DNS container with port mapping."""
+        from net_servers.actions.container import ContainerConfig, ContainerManager
+
+        config = ContainerConfig(
+            image_name="net-servers-dns", container_name="test-dns", port=5353
+        )
+
+        manager = ContainerManager(config)
+
+        with patch.object(manager, "_run_command") as mock_run:
+            mock_run.return_value = ContainerResult(True, "container_id", "", 0)
+
+            result = manager.run()
+
+            # Verify DNS port mapping was added
+            assert result.success
+            assert mock_run.called
+            call_args = mock_run.call_args[0][0]
+
+            # Should include -p flag for DNS port
+            assert "-p" in call_args
+            port_mapping_index = call_args.index("-p") + 1
+            assert call_args[port_mapping_index] == "5353:53"
+
+    def test_run_generic_container_fallback(self) -> None:
+        """Test running generic container with fallback port mapping."""
+        from net_servers.actions.container import ContainerConfig, ContainerManager
+
+        config = ContainerConfig(
+            image_name="generic-service", container_name="test-generic", port=9000
+        )
+
+        manager = ContainerManager(config)
+
+        with patch.object(manager, "_run_command") as mock_run:
+            mock_run.return_value = ContainerResult(True, "container_id", "", 0)
+
+            result = manager.run()
+
+            # Verify generic fallback port mapping was added
+            assert result.success
+            assert mock_run.called
+            call_args = mock_run.call_args[0][0]
+
+            # Should include -p flag for generic port mapping
+            assert "-p" in call_args
+            port_mapping_index = call_args.index("-p") + 1
+            assert call_args[port_mapping_index] == "9000:80"

@@ -15,7 +15,7 @@ ENV APACHE_RUN_USER=www-data \
     APACHE_LOCK_DIR=/var/lock/apache2 \
     DEBIAN_FRONTEND=noninteractive
 
-# Update package list and install Apache
+# Update package list and install Apache with SSL support
 RUN apt-get update && \
     apt-get install -y \
         apache2 \
@@ -23,6 +23,11 @@ RUN apt-get update && \
         curl \
         net-tools \
         iproute2 \
+        certbot \
+        python3-certbot-apache \
+        openssl \
+        ca-certificates \
+        gettext-base \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -30,14 +35,16 @@ RUN apt-get update && \
 # Copy configuration files
 COPY docker/apache/config/apache-extra.conf /etc/apache2/conf-available/
 COPY docker/apache/config/000-default.conf /etc/apache2/sites-available/
+COPY docker/apache/config/ssl-vhost.conf /etc/apache2/sites-available/
 COPY docker/apache/config/start-apache.sh /usr/local/bin/
 COPY docker/apache/content/index.html /var/www/html/
 
-# Configure Apache
+# Configure Apache with SSL support
 RUN a2enconf apache-extra && \
-    a2enmod rewrite headers deflate && \
+    a2enmod rewrite headers deflate ssl && \
     a2ensite 000-default && \
-    chmod +x /usr/local/bin/start-apache.sh
+    chmod +x /usr/local/bin/start-apache.sh && \
+    mkdir -p /data/state/certificates
 
 # Set proper ownership and permissions
 RUN chown -R www-data:www-data /var/www/html && \
@@ -49,8 +56,8 @@ RUN chown -R www-data:www-data /var/www/html && \
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost/ || exit 1
 
-# Expose HTTP port
-EXPOSE 80
+# Expose HTTP and HTTPS ports
+EXPOSE 80 443
 
 # Use custom startup script
 CMD ["/usr/local/bin/start-apache.sh"]

@@ -16,7 +16,7 @@ ENV MAIL_USER=vmail \
     DOVECOT_LOG_DIR=/var/log/dovecot \
     DEBIAN_FRONTEND=noninteractive
 
-# Update package list and install mail packages
+# Update package list and install mail packages with SSL support
 RUN apt-get update && \
     apt-get install -y \
         postfix \
@@ -34,6 +34,9 @@ RUN apt-get update && \
         procps \
         net-tools \
         iproute2 \
+        openssl \
+        ca-certificates \
+        gettext-base \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -45,7 +48,9 @@ RUN groupadd -g ${MAIL_GID} ${MAIL_GROUP} && \
 # Copy configuration files
 COPY docker/mail/config/postfix-main.cf /etc/postfix/main.cf
 COPY docker/mail/config/postfix-master.cf /etc/postfix/master.cf
+COPY docker/mail/config/postfix-ssl.cf /etc/postfix/ssl.cf
 COPY docker/mail/config/dovecot.conf /etc/dovecot/dovecot.conf
+COPY docker/mail/config/dovecot-ssl.conf /etc/dovecot/conf.d/10-ssl.conf
 COPY docker/mail/config/dovecot-auth-sql.conf.ext /etc/dovecot/conf.d/auth-sql.conf.ext
 COPY docker/mail/config/dovecot-10-mail.conf /etc/dovecot/conf.d/10-mail.conf
 COPY docker/mail/config/dovecot-10-master.conf /etc/dovecot/conf.d/10-master.conf
@@ -54,12 +59,13 @@ COPY docker/mail/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/mail/config/start-mail.sh /usr/local/bin/
 
 # Create necessary directories and set permissions
-RUN mkdir -p ${MAIL_DIR} ${POSTFIX_LOG_DIR} ${DOVECOT_LOG_DIR} && \
+RUN mkdir -p ${MAIL_DIR} ${POSTFIX_LOG_DIR} ${DOVECOT_LOG_DIR} /data/state/certificates && \
     chown -R ${MAIL_USER}:${MAIL_GROUP} ${MAIL_DIR} && \
     chown -R postfix:postfix ${POSTFIX_LOG_DIR} && \
     chown -R dovecot:dovecot ${DOVECOT_LOG_DIR} && \
     chmod 755 ${MAIL_DIR} ${POSTFIX_LOG_DIR} ${DOVECOT_LOG_DIR} && \
-    chmod +x /usr/local/bin/start-mail.sh
+    chmod +x /usr/local/bin/start-mail.sh && \
+    openssl dhparam -out /etc/dovecot/dh.pem 2048
 
 # Configure Postfix
 RUN postconf -e 'mydestination = localhost' && \

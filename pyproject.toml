@@ -136,6 +136,10 @@ module = "net_servers.cli_config"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = "net_servers.cli_certificates"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
 module = "net_servers.config.schemas"
 disallow_untyped_decorators = false
 
