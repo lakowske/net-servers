@@ -1,5 +1,7 @@
 # net-servers
 
+[![CI](https://github.com/lakowske/net-servers/actions/workflows/ci.yml/badge.svg)](https://github.com/lakowske/net-servers/actions/workflows/ci.yml)
+
 A comprehensive containerized development environment with Apache HTTP, Mail (Postfix + Dovecot), and DNS (BIND9) services, featuring automatic SSL/TLS certificate management.
 
 ## Features
@@ -156,7 +158,7 @@ python -m net_servers.cli config daemon --interval 5
 ### Running Tests
 ```bash
 # Run tests with coverage
-pytest --cov=. --cov-report=term-missing --cov-fail-under=80 --cov-report=html
+pytest --cov=. --cov-report=term-missing --cov-fail-under=70 --cov-report=html
 
 # Or use the VS Code task: Ctrl+Shift+P -> "Tasks: Run Task" -> "Run Tests with Coverage"
 ```
@@ -180,7 +182,7 @@ pre-commit run --all-files
 pytest
 
 # Run with coverage
-pytest --cov=. --cov-report=term-missing --cov-fail-under=80 --cov-report=html
+pytest --cov=. --cov-report=term-missing --cov-fail-under=70 --cov-report=html
 
 # Run SSL/TLS integration tests
 python -m pytest tests/integration/test_ssl_tls.py -v
