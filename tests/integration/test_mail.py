@@ -4,7 +4,6 @@ import email.mime.text
 import imaplib
 import poplib
 import smtplib
-import time
 from email.mime.text import MIMEText
 
 from .conftest import ContainerTestHelper
@@ -124,26 +123,48 @@ class TestMailContainer:
         with smtplib.SMTP("localhost", smtp_port, timeout=2) as smtp:
             smtp.send_message(msg)
 
-        # Wait for delivery
-        time.sleep(1)
+        # Verify email received (with retry logic for fast delivery)
+        import time
 
-        # Verify email received
-        with imaplib.IMAP4("localhost", imap_port) as imap:
-            imap.login("test@local", "password")
-            imap.select("INBOX")
+        max_attempts = 10  # Up to 1 second total wait
+        found_email = False
 
-            result, message_ids = imap.search(None, f'SUBJECT "{test_subject}"')
-            assert result == "OK"
+        for attempt in range(max_attempts):
+            try:
+                with imaplib.IMAP4("localhost", imap_port) as imap:
+                    imap.login("test@local", "password")
+                    imap.select("INBOX")
 
-            if message_ids[0]:
-                message_list = message_ids[0].split()
-                assert len(message_list) > 0
+                    result, message_ids = imap.search(None, f'SUBJECT "{test_subject}"')
+                    assert result == "OK"
 
-                result, message_data = imap.fetch(message_list[-1], "(RFC822)")
-                assert result == "OK"
+                    if message_ids[0]:
+                        message_list = message_ids[0].split()
+                        if len(message_list) > 0:
+                            result, message_data = imap.fetch(
+                                message_list[-1], "(RFC822)"
+                            )
+                            assert result == "OK"
 
-                email_message = email.message_from_bytes(message_data[0][1])
-                assert test_subject in email_message["Subject"]
+                            email_message = email.message_from_bytes(message_data[0][1])
+                            assert test_subject in email_message["Subject"]
+                            found_email = True
+                            break
+
+                # If not found immediately, wait briefly before retry
+                if attempt == 0:
+                    continue  # Try immediately first
+                time.sleep(0.1)  # 100ms between retries
+
+            except Exception:
+                if attempt == max_attempts - 1:  # Last attempt
+                    raise
+                time.sleep(0.1)
+
+        assert found_email, (
+            f"Email with subject '{test_subject}' not found after "
+            f"{max_attempts} attempts"
+        )
 
     def test_11_mail_logs_accessible(self, mail_container: ContainerTestHelper):
         """Test that mail service logs are accessible and being written."""

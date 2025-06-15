@@ -11,7 +11,6 @@ from typing import Generator
 import pytest
 
 from net_servers.actions.container import ContainerManager
-from net_servers.config.containers import get_container_config
 from net_servers.config.manager import ConfigurationManager
 from net_servers.config.schemas import DomainConfig, UserConfig
 from net_servers.config.sync import (
@@ -42,60 +41,60 @@ def config_manager(temp_config_dir: Path) -> ConfigurationManager:
 def mail_container_manager(
     config_manager: ConfigurationManager,
 ) -> Generator[ContainerManager, None, None]:
-    """Start mail container for testing with no cleanup."""
-    mail_config = get_container_config("mail", use_config_manager=True)
-    manager = ContainerManager(mail_config)
+    """Start mail container for testing with persistent reuse."""
+    from .conftest import ContainerTestHelper
 
-    # Stop any existing container
-    manager.stop()
-    manager.remove_container(force=True)
+    # Use ContainerTestHelper for persistent container management
+    helper = ContainerTestHelper("mail")
 
-    # Build and start container
-    build_result = manager.build()
-    assert (
-        build_result.success
-    ), f"Failed to build mail container: {build_result.stderr}"
+    # Build container only if needed
+    if not helper.manager.image_exists():
+        build_result = helper.manager.build()
+        assert (
+            build_result.success
+        ), f"Failed to build mail container: {build_result.stderr}"
 
-    # Get dynamic port mapping for mail service
-    port_mapping = get_port_manager().get_port_mapping_string("mail")
+    # Start container with reuse capability
+    if not helper.start_container(force_restart=False):
+        pytest.fail("Failed to start mail container")
 
-    run_result = manager.run(port_mapping=port_mapping)
-    assert run_result.success, f"Failed to start mail container: {run_result.stderr}"
+    # Give mail services extra time only if just started
+    if not helper.is_container_ready():
+        print("Waiting for mail services to initialize...")
+        time.sleep(2)  # Reduced from 5s - persistent containers start faster
 
-    # Wait for services to start
-    time.sleep(5)
+    yield helper.manager
 
-    yield manager
-
-    # Note: No cleanup - container left running for debugging
+    # Note: Container left running for debugging and performance
 
 
 @pytest.fixture(scope="session")
 def dns_container_manager(
     config_manager: ConfigurationManager,
 ) -> Generator[ContainerManager, None, None]:
-    """Start DNS container for testing with no cleanup."""
-    dns_config = get_container_config("dns", use_config_manager=True)
-    manager = ContainerManager(dns_config)
+    """Start DNS container for testing with persistent reuse."""
+    from .conftest import ContainerTestHelper
 
-    # Stop any existing container
-    manager.stop()
-    manager.remove_container(force=True)
+    # Use ContainerTestHelper for persistent container management
+    helper = ContainerTestHelper("dns")
 
-    # Build and start container
-    build_result = manager.build()
-    assert build_result.success, f"Failed to build DNS container: {build_result.stderr}"
+    # Build container only if needed
+    if not helper.manager.image_exists():
+        build_result = helper.manager.build()
+        assert (
+            build_result.success
+        ), f"Failed to build DNS container: {build_result.stderr}"
 
-    # Get dynamic port mapping for DNS service
-    port_mapping = get_port_manager().get_port_mapping_string("dns")
+    # Start container with reuse capability
+    if not helper.start_container(force_restart=False):
+        pytest.fail("Failed to start DNS container")
 
-    run_result = manager.run(port_mapping=port_mapping)
-    assert run_result.success, f"Failed to start DNS container: {run_result.stderr}"
+    # Brief wait for services to start (reduced for persistent containers)
+    time.sleep(1)  # Reduced from 3s
 
-    # Wait for services to start
-    time.sleep(3)
+    yield helper.manager
 
-    yield manager
+    # Note: Container left running for debugging and performance
 
     # Note: No cleanup - container left running for debugging
 
@@ -126,7 +125,11 @@ def sync_manager(
 class TestUserLifecycle:
     """Test complete user lifecycle including email functionality."""
 
-    def test_user_lifecycle_complete(self, sync_manager: ConfigurationSyncManager):
+    def test_user_lifecycle_complete(
+        self,
+        sync_manager: ConfigurationSyncManager,
+        mail_container_manager: ContainerManager,
+    ):
         """Test complete user lifecycle: add → verify → email → delete."""
         test_user = UserConfig(
             username="testuser",
@@ -162,27 +165,33 @@ class TestUserLifecycle:
                 "testuser@local.dev" in virtual_users_content
             ), "User not in virtual_users file"
 
-        # Step 5: Wait for services to reload and test email delivery
-        time.sleep(2)
+        # Step 5: Brief wait for services to reload and test email delivery
+        time.sleep(1)  # Reduced from 2s
 
         # For now, test with existing mail users since config management
         # isn't fully integrated
         # TODO: Integrate with actual container configuration management
+
+        # Get mail container helper for correct port mapping
+        from .conftest import ContainerTestHelper
+
+        mail_helper = ContainerTestHelper("mail")
+
         email_sent = self._send_test_email(
             to_email="test@local",  # Use existing container user
             subject="Test Email for User Lifecycle",
             body="This is a test email to verify user creation.",
+            mail_helper=mail_helper,
         )
         assert email_sent, "Failed to send test email"
 
-        # Wait for email delivery
-        time.sleep(3)
-
-        # Verify email was received using existing container user
+        # Verify email was received using existing container user (with retry logic)
         email_received = self._check_email_received(
             username="test@local",  # Use full email address for auth
             password="password",  # Use existing container password
             expected_subject="Test Email for User Lifecycle",
+            mail_helper=mail_helper,
+            max_wait_time=2,  # Maximum 2 seconds wait with polling
         )
         assert email_received, "Test email was not received"
 
@@ -290,7 +299,9 @@ class TestUserLifecycle:
             if errors:
                 print(f"Validation warnings for {service}: {errors}")
 
-    def _send_test_email(self, to_email: str, subject: str, body: str) -> bool:
+    def _send_test_email(
+        self, to_email: str, subject: str, body: str, mail_helper=None
+    ) -> bool:
         """Send a test email via SMTP."""
         try:
             # Create message
@@ -299,9 +310,16 @@ class TestUserLifecycle:
             msg["From"] = "admin@local.dev"
             msg["To"] = to_email
 
-            # Send via SMTP using dynamic port allocation
-            smtp_port = get_port_manager().get_host_port("mail", 25)
-            with smtplib.SMTP("localhost", smtp_port) as smtp:
+            # Send via SMTP using container helper for correct port
+            if mail_helper:
+                smtp_port = mail_helper.get_container_port(25)
+            else:
+                # Fallback to port manager
+                smtp_port = get_port_manager().get_host_port("mail", 25)
+
+            with smtplib.SMTP(
+                "localhost", smtp_port, timeout=2
+            ) as smtp:  # Faster timeout
                 smtp.send_message(msg)
 
             return True
@@ -311,42 +329,75 @@ class TestUserLifecycle:
             return False
 
     def _check_email_received(
-        self, username: str, password: str, expected_subject: str
+        self,
+        username: str,
+        password: str,
+        expected_subject: str,
+        mail_helper=None,
+        max_wait_time=2,
     ) -> bool:
-        """Check if email was received via POP3."""
-        try:
-            # Connect to POP3 server using dynamic port allocation
+        """Check if email was received via POP3 with smart polling."""
+        import time
+
+        # Get port
+        if mail_helper:
+            pop3_port = mail_helper.get_container_port(110)
+        else:
             pop3_port = get_port_manager().get_host_port("mail", 110)
-            pop = poplib.POP3("localhost", pop3_port)
+
+        # Smart polling: check immediately, then retry with short delays
+        start_time = time.time()
+        attempts = 0
+
+        while time.time() - start_time < max_wait_time:
+            attempts += 1
             try:
-                pop.user(username)
-                pop.pass_(password)
-
-                # Get message count
-                num_messages = len(pop.list()[1])
-
-                # Check recent messages for expected subject
-                for i in range(max(1, num_messages - 5), num_messages + 1):
-                    try:
-                        msg_lines = pop.retr(i)[1]
-                        msg_text = "\n".join(line.decode("utf-8") for line in msg_lines)
-
-                        subject_line = f"Subject: {expected_subject}"
-                        if subject_line in msg_text:
-                            return True
-                    except Exception:
-                        continue
-
-                return False
-            finally:
+                pop = poplib.POP3("localhost", pop3_port)
                 try:
-                    pop.quit()
-                except Exception:
-                    pass
+                    pop.user(username)
+                    pop.pass_(password)
 
-        except Exception as e:
-            print(f"Failed to check email reception: {e}")
-            return False
+                    # Get message count
+                    num_messages = len(pop.list()[1])
+
+                    # Check recent messages for expected subject
+                    for i in range(max(1, num_messages - 5), num_messages + 1):
+                        try:
+                            msg_lines = pop.retr(i)[1]
+                            msg_text = "\n".join(
+                                line.decode("utf-8") for line in msg_lines
+                            )
+
+                            subject_line = f"Subject: {expected_subject}"
+                            if subject_line in msg_text:
+                                return True  # Found the email!
+                        except Exception:
+                            continue  # Skip this message
+
+                finally:
+                    try:
+                        pop.quit()
+                    except Exception:
+                        pass
+
+                # If not found on this attempt, wait briefly before retry
+                if attempts == 1:
+                    continue  # Try immediately on first failure
+                time.sleep(0.1)  # Brief delay between retries
+
+            except Exception:
+                # Connection failed, wait briefly before retry
+                if attempts == 1:
+                    continue  # Try immediately on first failure
+                time.sleep(0.1)
+
+        # Email not found within timeout
+        print(
+            f"Failed to check email reception: Email with subject "
+            f"'{expected_subject}' not found after {attempts} attempts "
+            f"in {max_wait_time}s"
+        )
+        return False
 
     def test_cross_service_consistency(self, sync_manager: ConfigurationSyncManager):
         """Test that user changes are consistently applied across all services."""

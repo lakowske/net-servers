@@ -47,16 +47,41 @@ class ContainerTestHelper:
                     # Service may not have predefined ports, that's OK
                     self.port_mapping = None
 
-    def start_container(self, port_mapping: str = None) -> bool:
-        """Start the container and wait for it to be ready."""
-        # Stop any existing container first
-        self.manager.stop()
-        self.manager.remove_container(force=True)
+    def start_container(
+        self, port_mapping: str = None, force_restart: bool = False
+    ) -> bool:
+        """Start the container and wait for it to be ready.
+
+        Args:
+            port_mapping: Optional port mapping string
+            force_restart: If True, stop and restart existing container.
+                          If False, reuse running container if available.
+        """
+        # Check if container is already running (unless force restart)
+        if not force_restart and self.is_container_ready():
+            print(f"Container {self.config.container_name} already running, reusing...")
+            return True
+
+        # Check if container exists but is not running
+        container_exists = self._container_exists()
+
+        # Only stop/remove if we need to restart or if container exists but is not ready
+        if force_restart or (container_exists and not self.is_container_ready()):
+            print(
+                f"Stopping/removing existing container {self.config.container_name}..."
+            )
+            self.manager.stop()
+            self.manager.remove_container(force=True)
+        elif container_exists and self.is_container_ready():
+            # Container exists and is running - this should have been caught above
+            print(f"Container {self.config.container_name} is already running")
+            return True
 
         # Use provided port mapping, or fall back to instance default
         actual_port_mapping = port_mapping or self.port_mapping
 
         # Start the container
+        print(f"Starting container {self.config.container_name}...")
         result = self.manager.run(detached=True, port_mapping=actual_port_mapping)
         if not result.success:
             return False
@@ -65,6 +90,9 @@ class ContainerTestHelper:
         max_attempts = 60  # Increased timeout for mail server
         for _ in range(max_attempts):
             if self.is_container_ready():
+                print(
+                    f"Container {self.config.container_name} ready after {_+1} attempts"
+                )
                 return True
             time.sleep(1)
 
@@ -104,6 +132,28 @@ class ContainerTestHelper:
                 check=False,
             )
             return result.returncode == 0 and "Up" in result.stdout
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError):
+            return False
+
+    def _container_exists(self) -> bool:
+        """Check if container exists (running or stopped)."""
+        try:
+            result = subprocess.run(
+                [
+                    "podman",
+                    "ps",
+                    "-a",  # Show all containers, not just running
+                    "--filter",
+                    f"name={self.config.container_name}",
+                    "--format",
+                    "{{.Names}}",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            return result.returncode == 0 and bool(result.stdout.strip())
         except (subprocess.TimeoutExpired, subprocess.SubprocessError):
             return False
 
@@ -161,14 +211,18 @@ def podman_available() -> bool:
 def apache_container(
     podman_available: bool,
 ) -> Generator[ContainerTestHelper, None, None]:
-    """Session-scoped fixture for Apache container testing."""
+    """Session-scoped fixture for Apache container testing.
+
+    Container is started once per test session and reused across all tests.
+    Container is left running after tests for debugging and performance.
+    """
     if not podman_available:
         pytest.skip("Podman not available for integration testing")
 
     helper = ContainerTestHelper("apache")
 
-    # Start container with dynamic port mapping
-    if not helper.start_container():
+    # Start container, reusing if already running
+    if not helper.start_container(force_restart=False):
         pytest.fail("Failed to start Apache container")
 
     try:
@@ -176,44 +230,51 @@ def apache_container(
         # Print debugging info when tests complete
         helper.print_container_info()
         print(
-            "\nApache container left running for debugging. "
-            "Clean up manually when done."
+            "\nApache container left running for debugging and performance. "
+            "Rerun tests to reuse existing container."
         )
     except Exception:
         # On test failures, keep container for debugging
         helper.print_container_info()
         print("\nApache container left running for debugging failed tests.")
         raise
-    # Note: Container is intentionally NOT stopped to allow log inspection
+    # Note: Container is intentionally NOT stopped to allow log inspection and reuse
 
 
 @pytest.fixture(scope="session")
 def mail_container(
     podman_available: bool,
 ) -> Generator[ContainerTestHelper, None, None]:
-    """Session-scoped fixture for Mail container testing."""
+    """Session-scoped fixture for Mail container testing.
+
+    Container is started once per test session and reused across all tests.
+    Container is left running after tests for debugging and performance.
+    """
     if not podman_available:
         pytest.skip("Podman not available for integration testing")
 
     helper = ContainerTestHelper("mail")
 
-    # Start container with dynamic port mapping
-    if not helper.start_container():
+    # Start container, reusing if already running
+    if not helper.start_container(force_restart=False):
         pytest.fail("Failed to start Mail container")
 
-    # Give mail services extra time to initialize
-    time.sleep(10)
+    # Give mail services extra time to initialize only if container was just started
+    if not helper.is_container_ready():
+        print("Waiting for mail services to initialize...")
+        time.sleep(10)
 
     try:
         yield helper
         # Print debugging info when tests complete
         helper.print_container_info()
         print(
-            "\nMail container left running for debugging. Clean up manually when done."
+            "\nMail container left running for debugging and performance. "
+            "Rerun tests to reuse existing container."
         )
     except Exception:
         # On test failures, keep container for debugging
         helper.print_container_info()
         print("\nMail container left running for debugging failed tests.")
         raise
-    # Note: Container is intentionally NOT stopped to allow log inspection
+    # Note: Container is intentionally NOT stopped to allow log inspection and reuse

@@ -47,11 +47,35 @@ clean-python/
 
 ## Development Commands
 
+### Core Testing and Quality Checks
+
 - `pytest --cov=. --cov-report=term-missing --cov-fail-under=80 --cov-report=html` - Run tests with coverage
+- `pytest tests/integration/ -v` - Run integration tests (fast: ~6s with persistent containers)
 - `black .` - Format code
 - `flake8` - Run linting
 - `pre-commit install` - Install pre-commit hooks
 - `pre-commit run --all-files` - Run all pre-commit checks
+
+### Pre-Commit Testing Workflow
+
+**Recommended before each commit:**
+
+```bash
+# 1. Run integration tests (fast with persistent containers)
+pytest tests/integration/ -v
+
+# 2. Run pre-commit checks
+pre-commit run --all-files
+
+# 3. If all pass, commit your changes
+git commit -m "Your commit message"
+```
+
+**Why run integration tests?**
+- Only takes ~6 seconds (optimized with persistent containers)
+- Catches container configuration issues early
+- Validates cross-service functionality
+- Prevents deployment problems
 
 ## CLI Interface
 

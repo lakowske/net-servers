@@ -254,6 +254,18 @@ class ContainerManager:
 
         return result
 
+    def image_exists(self) -> bool:
+        """Check if container image exists."""
+        cmd = [
+            "podman",
+            "images",
+            "--format",
+            "{{.Repository}}:{{.Tag}}",
+            self.config.image_name,
+        ]
+        result = self._run_command(cmd)
+        return result.success and bool(result.stdout.strip())
+
     def list_containers(self, all_containers: bool = False) -> ContainerResult:
         """List containers."""
         cmd = ["podman", "ps", "--format", "json"]
