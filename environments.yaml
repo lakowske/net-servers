@@ -10,7 +10,7 @@ environments:
   - development
   - local
   created_at: '2024-01-01T00:00:00'
-  last_used: '2025-06-15T07:18:35.072407'
+  last_used: '2025-06-15T07:59:37.877608'
   certificate_mode: self_signed
   port_mappings: {}
 - name: testing
@@ -38,7 +38,7 @@ environments:
   - testing
   - pre-production
   created_at: '2024-01-01T00:00:00'
-  last_used: '2024-01-01T00:00:00'
+  last_used: '2025-06-15T07:47:23.716431'
   certificate_mode: self_signed
   port_mappings: {}
 - name: production

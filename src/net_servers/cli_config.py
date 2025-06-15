@@ -7,6 +7,7 @@ from .config.containers import get_container_config
 from .config.manager import ConfigurationManager
 from .config.schemas import DomainConfig, UserConfig
 from .config.sync import (
+    ApacheServiceSynchronizer,
     ConfigurationSyncManager,
     DnsServiceSynchronizer,
     MailServiceSynchronizer,
@@ -31,6 +32,12 @@ def setup_sync_manager(base_path: str = "/data") -> ConfigurationSyncManager:
         dns_container = ContainerManager(dns_config)
         dns_sync = DnsServiceSynchronizer(config_manager, dns_container)
         sync_manager.register_synchronizer("dns", dns_sync)
+
+        # Apache service
+        apache_config = get_container_config("apache", use_config_manager=True)
+        apache_container = ContainerManager(apache_config)
+        apache_sync = ApacheServiceSynchronizer(config_manager, apache_container)
+        sync_manager.register_synchronizer("apache", apache_sync)
 
     except Exception as e:
         click.echo(f"Warning: Could not initialize all service synchronizers: {e}")

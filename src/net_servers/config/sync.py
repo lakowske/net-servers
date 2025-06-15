@@ -378,6 +378,163 @@ class DnsServiceSynchronizer(ServiceSynchronizer):
             return False
 
 
+class ApacheServiceSynchronizer(ServiceSynchronizer):
+    """Synchronizes configuration changes to Apache service (WebDAV)."""
+
+    def __init__(
+        self,
+        config_manager: ConfigurationManager,
+        container_manager: Optional[ContainerManager] = None,
+    ):
+        """Initialize Apache service synchronizer."""
+        super().__init__(config_manager)
+        self.container_manager = container_manager
+
+    def sync_users(self, users: List[UserConfig]) -> bool:
+        """Synchronize WebDAV users to Apache authentication."""
+        try:
+            # Only sync users that have webdav service enabled
+            webdav_users = [user for user in users if "webdav" in user.services]
+
+            if not webdav_users:
+                self.logger.info("No users with WebDAV service enabled")
+                return True
+
+            # Sync WebDAV authentication by executing commands in the container
+            if self.container_manager:
+                return self._sync_webdav_authentication(webdav_users)
+            else:
+                self.logger.warning(
+                    "Apache container manager not available, WebDAV sync skipped"
+                )
+                return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to sync users to Apache service: {e}")
+            return False
+
+    def sync_domains(self, domains: List[DomainConfig]) -> bool:
+        """Apache service doesn't need domain synchronization for WebDAV."""
+        return True
+
+    def validate_configuration(self) -> List[str]:
+        """Validate Apache configuration."""
+        errors = []
+        try:
+            if self.container_manager:
+                # Test Apache configuration syntax
+                result = self.container_manager.execute_command(
+                    ["/usr/sbin/apache2ctl", "configtest"]
+                )
+                if not result.success:
+                    errors.append(f"Apache configuration test failed: {result.stderr}")
+        except Exception as e:
+            errors.append(f"Failed to validate Apache configuration: {e}")
+
+        return errors
+
+    def reload_service(self) -> bool:
+        """Reload Apache service to pick up configuration changes."""
+        try:
+            if not self.container_manager:
+                self.logger.warning(
+                    "Apache container manager not available, cannot reload"
+                )
+                return False
+
+            # Graceful Apache reload
+            result = self.container_manager.execute_command(
+                ["/usr/sbin/apache2ctl", "graceful"]
+            )
+
+            if result.success:
+                self.logger.info("Successfully reloaded Apache service")
+                return True
+            else:
+                self.logger.error(f"Failed to reload Apache service: {result.stderr}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to reload Apache service: {e}")
+            return False
+
+    def _sync_webdav_authentication(self, webdav_users: List[UserConfig]) -> bool:
+        """Sync WebDAV authentication by updating htdigest file."""
+        if not self.container_manager:
+            self.logger.error("Container manager not available for WebDAV sync")
+            return False
+
+        try:
+            # Clear existing WebDAV password file
+            clear_cmd = ["rm", "-f", "/etc/apache2/.webdav-digest"]
+            result = self.container_manager.execute_command(clear_cmd)
+
+            if not result.success:
+                self.logger.warning(
+                    f"Could not clear WebDAV password file: {result.stderr}"
+                )
+
+            # Add each WebDAV user with their current password
+            for user in webdav_users:
+                password = self._get_user_webdav_password(user.username)
+                if password:
+                    # Use htdigest to add user with password
+                    htdigest_cmd = [
+                        "bash",
+                        "-c",
+                        f'printf "{password}\\n{password}\\n" | '
+                        f"htdigest -c /etc/apache2/.webdav-digest "
+                        f'"WebDAV Secure Area" "{user.username}"',
+                    ]
+
+                    # For first user, use -c flag, for subsequent users omit it
+                    if user != webdav_users[0]:
+                        htdigest_cmd = [
+                            "bash",
+                            "-c",
+                            f'printf "{password}\\n{password}\\n" | '
+                            f"htdigest /etc/apache2/.webdav-digest "
+                            f'"WebDAV Secure Area" "{user.username}"',
+                        ]
+
+                    result = self.container_manager.execute_command(htdigest_cmd)
+
+                    if result.success:
+                        self.logger.info(
+                            f"Updated WebDAV authentication for user: {user.username}"
+                        )
+                    else:
+                        self.logger.error(
+                            f"Failed to update WebDAV auth for {user.username}: "
+                            f"{result.stderr}"
+                        )
+                        return False
+                else:
+                    self.logger.warning(
+                        f"No password available for WebDAV user: {user.username}"
+                    )
+
+            # Reload Apache to pick up authentication changes
+            return self.reload_service()
+
+        except Exception as e:
+            self.logger.error(f"Failed to sync WebDAV authentication: {e}")
+            return False
+
+    def _get_user_webdav_password(self, username: str) -> Optional[str]:
+        """Get WebDAV password for user from secrets system."""
+        try:
+            from .secrets import PasswordManager
+
+            secrets_file = self.config_manager.paths.config_path / "secrets.yaml"
+            password_manager = PasswordManager(secrets_file)
+
+            return password_manager.get_user_password_for_service(username, "webdav")
+        except Exception as e:
+            self.logger.error(f"Failed to get WebDAV password for {username}: {e}")
+            return None
+
+
 class ConfigurationSyncManager:
     """Manages configuration synchronization across all services."""
 

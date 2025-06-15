@@ -280,25 +280,44 @@ class TestConfigurationManager:
 
             # Test development mode (default)
             volumes = config_manager.get_container_volumes(development_mode=True)
-            assert len(volumes) == 4
+
+            # Calculate expected volumes (project root and environments.yaml if exists)
+            import os
+            from pathlib import Path
+
+            current_file = os.path.abspath(__file__)
+            project_root = os.path.dirname(os.path.dirname(current_file))
+            code_host_path = str(Path(project_root).resolve())
+
+            expected_volume_count = 4  # config, state, logs, code
+            environments_file = os.path.join(code_host_path, "environments.yaml")
+            if os.path.exists(environments_file):
+                expected_volume_count = 5  # +environments.yaml
+
+            assert len(volumes) == expected_volume_count
 
             # Check volume types
             volume_paths = [(v.host_path, v.container_path) for v in volumes]
-            from pathlib import Path
 
             expected_paths = [
                 (str(Path(f"{temp_dir}/config").resolve()), "/data/config"),
                 (str(Path(f"{temp_dir}/state").resolve()), "/data/state"),
                 (str(Path(f"{temp_dir}/logs").resolve()), "/data/logs"),
-                (str(Path(f"{temp_dir}/code").resolve()), "/data/code"),
+                (code_host_path, "/data/code"),
             ]
+
+            if os.path.exists(environments_file):
+                expected_paths.append((environments_file, "/data/environments.yaml"))
 
             for expected in expected_paths:
                 assert expected in volume_paths
 
-            # All should be read-write in development mode
+            # All should be read-write in development mode except environments.yaml
             for volume in volumes:
-                assert not volume.read_only
+                if volume.container_path == "/data/environments.yaml":
+                    assert volume.read_only  # environments.yaml is read-only
+                else:
+                    assert not volume.read_only
 
     def test_get_container_volumes_production_mode(self):
         """Test getting container volumes in production mode."""
@@ -309,9 +328,12 @@ class TestConfigurationManager:
             volumes = config_manager.get_container_volumes(development_mode=False)
 
             # All volumes should still be read-write in current implementation
-            # (This test documents current behavior)
+            # except environments.yaml (This test documents current behavior)
             for volume in volumes:
-                assert not volume.read_only
+                if volume.container_path == "/data/environments.yaml":
+                    assert volume.read_only  # environments.yaml is read-only
+                else:
+                    assert not volume.read_only
 
     def test_get_container_environment_mail(self):
         """Test getting environment variables for mail service."""

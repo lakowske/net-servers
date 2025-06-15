@@ -62,7 +62,20 @@
             <li>Port mapping: 8080 -> 80</li>
             <li>Document root: /var/www/html</li>
             <li>Log directory: /var/log/apache2</li>
+            <li><strong>WebDAV:</strong> <a href="https://localhost:8443/webdav/">Secure File Storage</a></li>
         </ul>
+
+        <div class="info">
+            <h3>🌟 WebDAV File Storage (HTTPS Required)</h3>
+            <p>This server includes secure WebDAV support for file upload/download:</p>
+            <ul>
+                <li><strong>Web Access:</strong> <a href="https://localhost:8443/webdav/">Browse files via HTTPS</a></li>
+                <li><strong>Windows:</strong> Map network drive to <code>https://localhost:8443/webdav/</code></li>
+                <li><strong>macOS:</strong> Connect to server at <code>https://localhost:8443/webdav/</code></li>
+                <li><strong>Security:</strong> WebDAV requires HTTPS and user authentication</li>
+                <li><strong>Credentials:</strong> Uses configured users from <code>users.yaml</code></li>
+            </ul>
+        </div>
     </div>
 </body>
 </html>

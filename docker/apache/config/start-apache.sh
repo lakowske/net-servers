@@ -15,6 +15,24 @@ mkdir -p ${APACHE_RUN_DIR} ${APACHE_LOCK_DIR} ${APACHE_LOG_DIR}
 chown -R www-data:www-data ${APACHE_LOG_DIR} ${APACHE_RUN_DIR} ${APACHE_LOCK_DIR}
 chmod 755 ${APACHE_LOG_DIR} ${APACHE_RUN_DIR} ${APACHE_LOCK_DIR}
 
+# Setup WebDAV directories
+WEBDAV_ROOT="/var/www/webdav"
+WEBDAV_LOCK_DIR="/var/lock/apache2/webdav"
+WEBDAV_PASSWORD_FILE="/etc/apache2/.webdav-digest"
+
+# Create WebDAV directories
+mkdir -p ${WEBDAV_ROOT} ${WEBDAV_LOCK_DIR}
+chown -R www-data:www-data ${WEBDAV_ROOT} ${WEBDAV_LOCK_DIR}
+chmod 755 ${WEBDAV_ROOT} ${WEBDAV_LOCK_DIR}
+
+# Create empty WebDAV password file - the sync system will populate it
+echo "Creating empty WebDAV authentication file - sync system will manage authentication"
+touch "$WEBDAV_PASSWORD_FILE"
+chmod 644 "$WEBDAV_PASSWORD_FILE"
+chown www-data:www-data "$WEBDAV_PASSWORD_FILE"
+
+echo "WebDAV authentication setup complete - managed by configuration sync system"
+
 # Configure SSL if enabled and certificates exist
 if [ "$SSL_ENABLED" = "true" ]; then
     echo "SSL enabled, checking for certificates..."

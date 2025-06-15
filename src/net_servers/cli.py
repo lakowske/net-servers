@@ -648,6 +648,11 @@ from net_servers.cli_environments import environments  # noqa: E402
 
 cli.add_command(environments)
 
+# Add password commands to main CLI
+from net_servers.cli_passwords import passwords  # noqa: E402
+
+cli.add_command(passwords)
+
 
 if __name__ == "__main__":
     cli()

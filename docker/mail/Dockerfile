@@ -16,7 +16,7 @@ ENV MAIL_USER=vmail \
     DOVECOT_LOG_DIR=/var/log/dovecot \
     DEBIAN_FRONTEND=noninteractive
 
-# Update package list and install mail packages with SSL support
+# Update package list and install mail packages with SSL support and Python for CLI
 RUN apt-get update && \
     apt-get install -y \
         postfix \
@@ -37,6 +37,9 @@ RUN apt-get update && \
         openssl \
         ca-certificates \
         gettext-base \
+        python3 \
+        python3-pip \
+        python3-venv \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -70,6 +73,15 @@ RUN mkdir -p ${MAIL_DIR} ${POSTFIX_LOG_DIR} ${DOVECOT_LOG_DIR} /data/state/certi
 # Configure Postfix
 RUN postconf -e 'mydestination = localhost' && \
     postconf -e 'mynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128 172.16.0.0/12 192.168.0.0/16 10.0.0.0/8'
+
+# Install CLI package and dependencies during build
+# Copy source code and pyproject.toml
+COPY src/ /opt/net-servers/src/
+COPY pyproject.toml /opt/net-servers/
+RUN cd /opt/net-servers && \
+    python3 -m venv .venv && \
+    .venv/bin/pip install --upgrade pip && \
+    .venv/bin/pip install -e .
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

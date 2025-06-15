@@ -5,6 +5,35 @@ set -e
 
 echo "Starting mail server container..."
 
+# Check CLI availability
+CLI_AVAILABLE=false
+USERS_CONFIG="/data/config/users.yaml"
+SECRETS_CONFIG="/data/config/secrets.yaml"
+PROJECT_ROOT="/data/code"
+
+# Check CLI availability (pre-installed during build)
+VENV_PYTHON="/opt/net-servers/.venv/bin/python3"
+if [ -f "$USERS_CONFIG" ] && [ -f "$VENV_PYTHON" ]; then
+    echo "Configuration found, testing CLI functionality..."
+
+    # Test CLI execution with virtual environment python
+    if ! $VENV_PYTHON -m net_servers.cli --help >/dev/null 2>&1; then
+        echo "ERROR: CLI execution failed"
+        echo "Please check CLI installation and dependencies"
+        exit 1
+    fi
+
+    echo "CLI available and functional - using configuration management system"
+    CLI_AVAILABLE=true
+    CLI_CMD="$VENV_PYTHON -m net_servers.cli"
+else
+    echo "WARNING: Configuration or CLI not available - using basic mail setup"
+    echo "Expected files:"
+    echo "  - Config: $USERS_CONFIG"
+    echo "  - Python: $VENV_PYTHON"
+    CLI_AVAILABLE=false
+fi
+
 # Set default SSL environment variables
 MAIL_TLS_ENABLED=${MAIL_TLS_ENABLED:-"false"}
 MAIL_REQUIRE_TLS=${MAIL_REQUIRE_TLS:-"false"}

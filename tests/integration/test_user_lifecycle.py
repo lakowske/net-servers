@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Generator
 
 import pytest
+import requests
 
 from net_servers.actions.container import ContainerManager
 from net_servers.config.manager import ConfigurationManager
@@ -96,7 +97,34 @@ def dns_container_manager(
 
     # Note: Container left running for debugging and performance
 
-    # Note: No cleanup - container left running for debugging
+
+@pytest.fixture(scope="session")
+def apache_container_manager(
+    config_manager: ConfigurationManager,
+) -> Generator[ContainerManager, None, None]:
+    """Start Apache container for testing with persistent reuse."""
+    from .conftest import ContainerTestHelper
+
+    # Use ContainerTestHelper for persistent container management
+    helper = ContainerTestHelper("apache")
+
+    # Build container only if needed
+    if not helper.manager.image_exists():
+        build_result = helper.manager.build()
+        assert (
+            build_result.success
+        ), f"Failed to build Apache container: {build_result.stderr}"
+
+    # Start container with reuse capability
+    if not helper.start_container(force_restart=False):
+        pytest.fail("Failed to start Apache container")
+
+    # Wait longer for SSL services to initialize properly
+    time.sleep(5)  # Extended wait for SSL setup
+
+    yield helper.manager
+
+    # Note: Container left running for debugging and performance
 
 
 @pytest.fixture(scope="session")
@@ -104,6 +132,7 @@ def sync_manager(
     config_manager: ConfigurationManager,
     mail_container_manager: ContainerManager,
     dns_container_manager: ContainerManager,
+    apache_container_manager: ContainerManager,
 ) -> ConfigurationSyncManager:
     """Create configuration sync manager with all services."""
     sync_manager = ConfigurationSyncManager(config_manager)
@@ -129,6 +158,7 @@ class TestUserLifecycle:
         self,
         sync_manager: ConfigurationSyncManager,
         mail_container_manager: ContainerManager,
+        apache_container_manager: ContainerManager,
     ):
         """Test complete user lifecycle: add → verify → email → delete."""
         test_user = UserConfig(
@@ -195,10 +225,61 @@ class TestUserLifecycle:
         )
         assert email_received, "Test email was not received"
 
-        # Step 6: Delete user
+        # Step 6: Test WebDAV functionality with admin user
+        # Set up WebDAV authentication using the sync system
+        from net_servers.config.secrets import PasswordManager
+
+        secrets_file = sync_manager.config_manager.paths.config_path / "secrets.yaml"
+        password_manager = PasswordManager(secrets_file)
+
+        # Set up admin user password for testing
+        admin_password = "admin_secure_password"
+        password_manager.set_user_password(username="admin", password=admin_password)
+
+        # Sync the passwords to WebDAV authentication
+        sync_success = sync_manager.sync_all_users()
+        assert sync_success, "Failed to sync WebDAV authentication"
+
+        # Get Apache container helper for correct port mapping
+        from .conftest import ContainerTestHelper
+
+        apache_helper = ContainerTestHelper("apache")
+
+        # Test WebDAV upload functionality with admin user from configuration
+        webdav_upload_success = self._test_webdav_upload(
+            username="admin",  # Admin user from configuration
+            password=admin_password,  # Password from secrets system
+            filename="test-lifecycle-file.txt",
+            content="This is a test file created during user lifecycle testing.",
+            apache_helper=apache_helper,
+        )
+        assert webdav_upload_success, "Failed to upload file via WebDAV"
+
+        # Test WebDAV download functionality
+        webdav_download_success = self._test_webdav_download(
+            username="admin",
+            password=admin_password,
+            filename="test-lifecycle-file.txt",
+            expected_content=(
+                "This is a test file created during user lifecycle testing."
+            ),
+            apache_helper=apache_helper,
+        )
+        assert webdav_download_success, "Failed to download file via WebDAV"
+
+        # Test WebDAV file listing
+        webdav_list_success = self._test_webdav_list(
+            username="admin",
+            password=admin_password,
+            expected_file="test-lifecycle-file.txt",
+            apache_helper=apache_helper,
+        )
+        assert webdav_list_success, "Failed to list files via WebDAV"
+
+        # Step 7: Delete user
         assert sync_manager.delete_user("testuser"), "Failed to delete test user"
 
-        # Step 7: Verify user was removed from configuration
+        # Step 8: Verify user was removed from configuration
         users_after_delete = sync_manager.config_manager.users_config.users
         user_still_exists = any(
             user.username == "testuser" for user in users_after_delete
@@ -207,7 +288,7 @@ class TestUserLifecycle:
             not user_still_exists
         ), "Test user still exists in configuration after deletion"
 
-        # Step 8: Verify mailbox was removed
+        # Step 9: Verify mailbox was removed
         assert (
             not mailbox_path.exists()
         ), "Mailbox directory still exists after user deletion"
@@ -443,6 +524,350 @@ class TestUserLifecycle:
 
         # Verify mailbox cleanup
         assert not mailbox_path.exists(), "User mailbox still exists after deletion"
+
+    def test_webdav_user_functionality(
+        self,
+        sync_manager: ConfigurationSyncManager,
+        apache_container_manager: ContainerManager,
+    ):
+        """Test WebDAV functionality comprehensively with test users."""
+        from .conftest import ContainerTestHelper
+
+        apache_helper = ContainerTestHelper("apache")
+
+        # Set up test users with passwords in the test environment
+        from net_servers.config.secrets import PasswordManager
+
+        secrets_file = sync_manager.config_manager.paths.config_path / "secrets.yaml"
+        password_manager = PasswordManager(secrets_file)
+
+        # Set up test passwords for WebDAV testing
+        test_users = [
+            {"username": "admin", "password": "admin_secure_password"},
+            {"username": "test1", "password": "test1_secure_password"},
+        ]
+
+        # Initialize passwords for test users
+        for user_info in test_users:
+            password_manager.set_user_password(
+                username=user_info["username"], password=user_info["password"]
+            )
+
+        # Sync the passwords to WebDAV authentication
+        sync_success = sync_manager.sync_all_users()
+        assert sync_success, "Failed to sync WebDAV authentication"
+
+        # Set up test scenarios
+        test_scenarios = []
+        for user_info in test_users:
+            # Verify password is available
+            password = password_manager.get_user_password_for_service(
+                user_info["username"], "webdav"
+            )
+            if password:
+                test_scenarios.append(
+                    {
+                        "username": user_info["username"],
+                        "password": password,
+                        "description": (
+                            f"{user_info['username'].title()} user with WebDAV access"
+                        ),
+                    }
+                )
+            else:
+                print(
+                    f"Warning: Password not found for {user_info['username']} "
+                    "after setting"
+                )
+
+        if not test_scenarios:
+            pytest.skip("No users with valid passwords found for WebDAV testing")
+
+        for scenario in test_scenarios:
+            username = scenario["username"]
+            password = scenario["password"]
+            desc = scenario["description"]
+
+            print(f"Testing WebDAV with {desc}")
+
+            # Test file operations for this user
+            test_filename = f"webdav-test-{username}.txt"
+            test_content = (
+                f"WebDAV test content for user {username}\nTimestamp: {time.time()}"
+            )
+
+            # Test upload
+            upload_success = self._test_webdav_upload(
+                username=username,
+                password=password,
+                filename=test_filename,
+                content=test_content,
+                apache_helper=apache_helper,
+            )
+            assert upload_success, f"WebDAV upload failed for {desc}"
+
+            # Test download
+            download_success = self._test_webdav_download(
+                username=username,
+                password=password,
+                filename=test_filename,
+                expected_content=test_content,
+                apache_helper=apache_helper,
+            )
+            assert download_success, f"WebDAV download failed for {desc}"
+
+            # Test file listing
+            list_success = self._test_webdav_list(
+                username=username,
+                password=password,
+                expected_file=test_filename,
+                apache_helper=apache_helper,
+            )
+            assert list_success, f"WebDAV file listing failed for {desc}"
+
+            print(f"✓ WebDAV functionality verified for {desc}")
+
+        # Test authentication failure with wrong credentials
+        auth_failure_test = self._test_webdav_authentication_failure(
+            username="admin",
+            wrong_password="wrongpassword",
+            apache_helper=apache_helper,
+        )
+        assert auth_failure_test, "WebDAV should reject invalid credentials"
+
+        print("✓ WebDAV authentication security verified")
+
+    def _test_webdav_authentication_failure(
+        self, username: str, wrong_password: str, apache_helper=None
+    ) -> bool:
+        """Test that WebDAV properly rejects invalid credentials."""
+        try:
+            # Get HTTPS port for WebDAV
+            if apache_helper:
+                https_port = apache_helper.get_container_port(443)
+            else:
+                from .port_manager import get_port_manager
+
+                https_port = get_port_manager().get_host_port("apache", 443)
+
+            webdav_url = f"https://localhost:{https_port}/webdav/"  # noqa: E231
+
+            # Create HTTP digest authentication with wrong password
+            from requests.auth import HTTPDigestAuth
+
+            auth = HTTPDigestAuth(username, wrong_password)
+
+            # Try to access WebDAV directory (should fail)
+            response = requests.get(
+                webdav_url,
+                auth=auth,
+                verify=False,  # Self-signed certificates
+                timeout=5,
+            )
+
+            # Should return 401 Unauthorized
+            return response.status_code == 401
+
+        except Exception as e:
+            print(f"WebDAV authentication test failed: {e}")
+            return False
+
+    def _test_webdav_upload(
+        self,
+        username: str,
+        password: str,
+        filename: str,
+        content: str,
+        apache_helper=None,
+    ) -> bool:
+        """Test WebDAV file upload functionality."""
+        try:
+            # Get HTTPS port for WebDAV (WebDAV requires HTTPS)
+            if apache_helper:
+                https_port = apache_helper.get_container_port(443)
+            else:
+                from .port_manager import get_port_manager
+
+                https_port = get_port_manager().get_host_port("apache", 443)
+
+            webdav_url = (
+                f"https://localhost:{https_port}" + f"/webdav/{filename}"  # noqa: E231
+            )
+
+            # Create HTTP digest authentication
+            from requests.auth import HTTPDigestAuth
+
+            auth = HTTPDigestAuth(username, password)
+
+            # Upload file using PUT request with SSL retry logic
+            session = requests.Session()
+            session.verify = False
+
+            # Try with different SSL configurations
+            for attempt in range(3):
+                try:
+                    response = session.put(
+                        webdav_url,
+                        data=content,
+                        auth=auth,
+                        timeout=10,  # Longer timeout
+                    )
+                    break  # Success, exit retry loop
+                except requests.exceptions.SSLError as e:
+                    if attempt == 2:  # Last attempt
+                        print(f"SSL error on attempt {attempt + 1}: {e}")
+                        session.close()
+                        return False
+                    time.sleep(1)  # Wait before retry
+                except Exception as e:
+                    if attempt == 2:  # Last attempt
+                        print(f"Request error on attempt {attempt + 1}: {e}")
+                        session.close()
+                        return False
+                    time.sleep(1)
+
+            session.close()
+
+            # WebDAV PUT should return 201 (Created) or 204 (No Content)
+            return response.status_code in [201, 204]
+
+        except Exception as e:
+            print(f"WebDAV upload failed: {e}")
+            return False
+
+    def _test_webdav_download(
+        self,
+        username: str,
+        password: str,
+        filename: str,
+        expected_content: str,
+        apache_helper=None,
+    ) -> bool:
+        """Test WebDAV file download functionality."""
+        try:
+            # Get HTTPS port for WebDAV
+            if apache_helper:
+                https_port = apache_helper.get_container_port(443)
+            else:
+                from .port_manager import get_port_manager
+
+                https_port = get_port_manager().get_host_port("apache", 443)
+
+            webdav_url = (
+                f"https://localhost:{https_port}" + f"/webdav/{filename}"  # noqa: E231
+            )
+
+            # Create HTTP digest authentication
+            from requests.auth import HTTPDigestAuth
+
+            auth = HTTPDigestAuth(username, password)
+
+            # Download file using GET request with SSL retry logic
+            session = requests.Session()
+            session.verify = False
+
+            # Try with retry logic for SSL issues
+            for attempt in range(3):
+                try:
+                    response = session.get(
+                        webdav_url,
+                        auth=auth,
+                        timeout=10,
+                    )
+                    break  # Success, exit retry loop
+                except requests.exceptions.SSLError as e:
+                    if attempt == 2:  # Last attempt
+                        print(
+                            f"SSL error during download on attempt {attempt + 1}: {e}"
+                        )
+                        session.close()
+                        return False
+                    time.sleep(1)
+                except Exception as e:
+                    if attempt == 2:  # Last attempt
+                        print(
+                            f"Request error during download on attempt "
+                            f"{attempt + 1}: {e}"
+                        )
+                        session.close()
+                        return False
+                    time.sleep(1)
+
+            session.close()
+
+            # Check if download was successful and content matches
+            if response.status_code == 200:
+                return response.text.strip() == expected_content.strip()
+            else:
+                print(f"WebDAV download failed with status {response.status_code}")
+                return False
+
+        except Exception as e:
+            print(f"WebDAV download failed: {e}")
+            return False
+
+    def _test_webdav_list(
+        self,
+        username: str,
+        password: str,
+        expected_file: str,
+        apache_helper=None,
+    ) -> bool:
+        """Test WebDAV directory listing functionality."""
+        try:
+            # Get HTTPS port for WebDAV
+            if apache_helper:
+                https_port = apache_helper.get_container_port(443)
+            else:
+                from .port_manager import get_port_manager
+
+                https_port = get_port_manager().get_host_port("apache", 443)
+
+            webdav_url = f"https://localhost:{https_port}/webdav/"  # noqa: E231
+
+            # Create HTTP digest authentication
+            from requests.auth import HTTPDigestAuth
+
+            auth = HTTPDigestAuth(username, password)
+
+            # List directory using PROPFIND request
+            headers = {
+                "Depth": "1",
+                "Content-Type": "application/xml",
+            }
+
+            # Simple PROPFIND request body
+            propfind_body = """<?xml version="1.0" encoding="utf-8" ?>
+<D:propfind xmlns:D="DAV:">
+    <D:prop>
+        <D:displayname/>
+        <D:getcontentlength/>
+        <D:getlastmodified/>
+        <D:resourcetype/>
+    </D:prop>
+</D:propfind>"""
+
+            response = requests.request(
+                "PROPFIND",
+                webdav_url,
+                data=propfind_body,
+                headers=headers,
+                auth=auth,
+                verify=False,  # Self-signed certificates
+                timeout=5,
+            )
+
+            # PROPFIND should return 207 Multi-Status
+            if response.status_code == 207:
+                # Check if expected file is in the listing
+                return expected_file in response.text
+            else:
+                print(f"WebDAV PROPFIND failed with status {response.status_code}")
+                return False
+
+        except Exception as e:
+            print(f"WebDAV directory listing failed: {e}")
+            return False
 
 
 class TestDomainManagement:

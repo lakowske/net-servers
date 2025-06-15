@@ -350,29 +350,57 @@ class TestVolumeHelpers:
 
     def test_get_default_volumes_default_path(self):
         """Test get_default_volumes with default path."""
+        import os
+        from pathlib import Path
+
         volumes = get_default_volumes()
+
+        # Calculate expected project root (same logic as in get_default_volumes)
+        current_file = os.path.abspath(__file__)
+        project_root = os.path.dirname(os.path.dirname(current_file))
+        code_host_path = str(Path(project_root).resolve())
 
         expected_volumes = [
             ("/data/config", "/data/config", False),
             ("/data/state", "/data/state", False),
             ("/data/logs", "/data/logs", False),
-            ("/data/code", "/data/code", False),
+            (code_host_path, "/data/code", False),
         ]
+
+        # Check if environments.yaml exists and add it if so
+        environments_file = os.path.join(code_host_path, "environments.yaml")
+        if os.path.exists(environments_file):
+            expected_volumes.append(
+                (environments_file, "/data/environments.yaml", True)
+            )
 
         assert volumes == expected_volumes
 
     def test_get_default_volumes_custom_path(self):
         """Test get_default_volumes with custom base path."""
+        import os
         from pathlib import Path
 
         custom_base = "/tmp/test-data"
         volumes = get_default_volumes(custom_base)
 
+        # Calculate expected project root (same logic as in get_default_volumes)
+        current_file = os.path.abspath(__file__)
+        project_root = os.path.dirname(os.path.dirname(current_file))
+        code_host_path = str(Path(project_root).resolve())
+
         expected_volumes = [
             (str(Path("/tmp/test-data/config").resolve()), "/data/config", False),
             (str(Path("/tmp/test-data/state").resolve()), "/data/state", False),
             (str(Path("/tmp/test-data/logs").resolve()), "/data/logs", False),
-            (str(Path("/tmp/test-data/code").resolve()), "/data/code", False),
+            (code_host_path, "/data/code", False),
         ]
+
+        # Check if environments.yaml exists and add it if so
+        environments_file = os.path.join(code_host_path, "environments.yaml")
+        if os.path.exists(environments_file):
+            expected_volumes.append(
+                (environments_file, "/data/environments.yaml", True)
+            )
 
         assert volumes == expected_volumes

@@ -177,3 +177,8 @@ environments.yaml.personal
 # Test environment configuration (generated for pre-commit isolation)
 environments-test.yaml
 environments.yaml.backup
+
+# Password and secrets files (contains sensitive data)
+secrets.yaml
+*/secrets.yaml
+**/config/secrets.yaml

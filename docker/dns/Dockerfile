@@ -16,7 +16,7 @@ ENV BIND_USER=bind \
     BIND_LOG_DIR=/var/log/bind \
     DEBIAN_FRONTEND=noninteractive
 
-# Update package list and install BIND packages
+# Update package list and install BIND packages and Python for CLI
 RUN apt-get update && \
     apt-get install -y \
         bind9 \
@@ -26,6 +26,9 @@ RUN apt-get update && \
         curl \
         net-tools \
         iproute2 \
+        python3 \
+        python3-pip \
+        python3-venv \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -44,6 +47,15 @@ RUN mkdir -p /etc/bind/zones ${BIND_LOG_DIR} && \
     chmod 755 /etc/bind/zones ${BIND_LOG_DIR} && \
     chmod 644 /etc/bind/*.conf /etc/bind/zones/* && \
     chmod +x /usr/local/bin/start-dns.sh
+
+# Install CLI package and dependencies during build
+# Copy source code and pyproject.toml
+COPY src/ /opt/net-servers/src/
+COPY pyproject.toml /opt/net-servers/
+RUN cd /opt/net-servers && \
+    python3 -m venv .venv && \
+    .venv/bin/pip install --upgrade pip && \
+    .venv/bin/pip install -e .
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

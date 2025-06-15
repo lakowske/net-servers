@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -61,6 +61,9 @@ class UserConfig(BaseModel):
     roles: List[str] = Field(default_factory=lambda: ["user"], description="User roles")
     mailbox_quota: str = Field(default="500M", description="Mailbox quota")
     enabled: bool = Field(default=True, description="User account enabled")
+    services: List[str] = Field(
+        default_factory=lambda: ["email"], description="Services user can access"
+    )
 
     @field_validator("email")
     @classmethod
@@ -98,6 +101,40 @@ class DomainsConfig(BaseModel):
 
     domains: List[DomainConfig] = Field(
         default_factory=list, description="List of domains"
+    )
+
+
+class UserSecretConfig(BaseModel):
+    """User secret configuration schema."""
+
+    password_hash: str = Field(..., description="Bcrypt password hash")
+    password_encrypted: Optional[str] = Field(
+        default=None, description="Encrypted main password for service derivation"
+    )
+    webdav_password: Optional[str] = Field(
+        default="auto", description="WebDAV password (auto = derive from main password)"
+    )
+    email_password: Optional[str] = Field(
+        default="auto", description="Email password (auto = derive from main password)"
+    )
+    created_at: str = Field(..., description="Secret creation timestamp")
+    last_changed: str = Field(..., description="Last password change timestamp")
+    services: Dict[str, str] = Field(
+        default_factory=dict, description="Service-specific password overrides"
+    )
+
+
+class SecretsConfig(BaseModel):
+    """Secrets configuration schema."""
+
+    user_secrets: Dict[str, UserSecretConfig] = Field(
+        default_factory=dict, description="User secrets by username"
+    )
+    encryption_key: Optional[str] = Field(
+        default=None, description="Optional encryption key for additional security"
+    )
+    last_updated: Optional[str] = Field(
+        default=None, description="Last update timestamp"
     )
 
 
@@ -274,7 +311,18 @@ def get_default_volumes(base_path: str = "/data") -> List[tuple]:
     """Get default volume mounts for development and production."""
     paths = ConfigurationPaths(base_path=Path(base_path))
 
-    return [
+    # For code volume, always use the project root (where src/ directory is)
+    # This ensures containers have access to the CLI and source code
+    import os
+
+    # Navigate up from src/net_servers/config/schemas.py to project root
+    current_file = os.path.abspath(__file__)
+    project_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+    )
+    code_host_path = str(Path(project_root).resolve())
+
+    volumes = [
         # Configuration volume (read-write for dynamic updates)
         (str(paths.config_path.resolve()), "/data/config", False),
         # State volume (read-write for persistent data)
@@ -282,9 +330,20 @@ def get_default_volumes(base_path: str = "/data") -> List[tuple]:
         # Logs volume (read-write for log files)
         (str(paths.logs_path.resolve()), "/data/logs", False),
         # Code volume (read-only in production, read-write in development)
+        # Mount the project root so containers have access to src/net_servers/
         (
-            str(paths.code_path.resolve()),
+            code_host_path,
             "/data/code",
             False,
         ),  # Set to True for production
     ]
+
+    # Add environments.yaml file mount if it exists
+    # This enables CLI environment management within containers
+    environments_file = os.path.join(code_host_path, "environments.yaml")
+    if os.path.exists(environments_file):
+        volumes.append(
+            (environments_file, "/data/environments.yaml", True)  # Read-only
+        )
+
+    return volumes
