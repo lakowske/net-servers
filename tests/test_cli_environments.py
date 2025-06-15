@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 from click.testing import CliRunner
 
 from net_servers.cli_environments import (
+    _get_environments_config_path,
     add_environment,
     environments,
     init_environments,
@@ -16,6 +17,88 @@ from net_servers.cli_environments import (
     switch_environment,
 )
 from net_servers.config.schemas import EnvironmentConfig
+
+
+class TestEnvironmentConfigPath:
+    """Test environment configuration path detection."""
+
+    @patch("os.environ.get")
+    @patch("os.path.exists")
+    def test_get_environments_config_path_from_env_var(self, mock_exists, mock_env_get):
+        """Test path detection from environment variable."""
+        mock_env_get.return_value = "/custom/path/environments.yaml"
+        mock_exists.side_effect = lambda path: path == "/custom/path/environments.yaml"
+
+        path = _get_environments_config_path()
+        assert path == "/custom/path/environments.yaml"
+
+    @patch("os.environ.get")
+    @patch("os.path.exists")
+    def test_get_environments_config_path_container_fallback(
+        self, mock_exists, mock_env_get
+    ):
+        """Test fallback to container path when /data exists."""
+        mock_env_get.return_value = None  # No env var set
+        mock_exists.side_effect = lambda path: path in [
+            "/data",
+            "/data/environments.yaml",
+        ]
+
+        path = _get_environments_config_path()
+        assert path == "/data/environments.yaml"
+
+    @patch("os.environ.get")
+    @patch("os.path.exists")
+    @patch("os.path.abspath")
+    def test_get_environments_config_path_project_fallback(
+        self, mock_abspath, mock_exists, mock_env_get
+    ):
+        """Test fallback to project directory."""
+        mock_env_get.return_value = None  # No env var set
+        mock_exists.return_value = False  # Nothing exists
+        mock_abspath.return_value = "/project/environments.yaml"
+
+        path = _get_environments_config_path()
+        assert path == "/project/environments.yaml"
+        mock_abspath.assert_called_once_with("./environments.yaml")
+
+    @patch("os.environ.get")
+    @patch("os.path.exists")
+    def test_get_environments_config_path_env_var_not_exists(
+        self, mock_exists, mock_env_get
+    ):
+        """Test env var path that doesn't exist falls back."""
+        mock_env_get.return_value = "/nonexistent/path/environments.yaml"
+        mock_exists.side_effect = lambda path: path in [
+            "/data",
+            "/data/environments.yaml",
+        ]
+
+        path = _get_environments_config_path()
+        # Should fall back to container path since env var path doesn't exist
+        assert path == "/data/environments.yaml"
+
+    def test_cli_environments_imports(self):
+        """Test that all CLI environment functions are importable."""
+        # This test ensures all public functions are accessible
+        from net_servers.cli_environments import (
+            add_environment,
+            environments,
+            init_environments,
+            list_environments,
+            show_current,
+            show_environment_info,
+            switch_environment,
+        )
+
+        # Verify functions are callable
+        assert callable(add_environment)
+        assert callable(environments)
+        assert callable(init_environments)
+        assert callable(list_environments)
+        assert callable(show_current)
+        assert callable(show_environment_info)
+        assert callable(switch_environment)
 
 
 class TestEnvironmentsCLI:

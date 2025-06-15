@@ -295,13 +295,11 @@ def get_container_config(
             config_manager = _get_config_manager()
             current_env = config_manager.get_current_environment()
             environment_name = current_env.name
-        except Exception as e:
-            # Re-raise with helpful message instead of silent fallback
-            raise RuntimeError(
-                f"Failed to load environment configuration: {e}. "
-                f"Initialize environments with: "
-                f"python -m net_servers.cli environments init"
-            ) from e
+        except Exception:
+            # Fall back to default environment when config manager unavailable
+            # This ensures CLI commands work even without environments.yaml
+            use_config_manager = False
+            environment_name = "default"
     elif environment_name is None:
         # When not using config manager, default to "default" environment
         environment_name = "default"

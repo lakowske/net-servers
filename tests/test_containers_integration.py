@@ -7,6 +7,7 @@ import pytest
 from net_servers.config.containers import (
     ENVIRONMENT_PORT_MAPPINGS,
     get_container_config,
+    list_container_configs,
 )
 
 
@@ -44,13 +45,39 @@ class TestGetContainerConfigIntegration:
 
     @patch("net_servers.cli_environments._get_config_manager")
     def test_get_container_config_with_config_manager_error(self, mock_get_manager):
-        """Test config manager error handling."""
+        """Test config manager error handling falls back gracefully."""
         mock_get_manager.side_effect = RuntimeError("Config error")
 
-        with pytest.raises(
-            RuntimeError, match="Failed to load environment configuration"
-        ):
-            get_container_config("apache", use_config_manager=True)
+        # Should fall back to default behavior instead of raising error
+        config = get_container_config("apache", use_config_manager=True)
+
+        # Should use default environment and container name
+        assert config.container_name == "net-servers-apache-default"
+        assert len(config.port_mappings) > 0
+
+    @patch("net_servers.cli_environments._get_config_manager")
+    def test_get_container_config_port_mapping_exception(self, mock_get_manager):
+        """Test exception handling in port mapping extraction."""
+        # Mock config manager that works for env detection but fails for port mapping
+        mock_env = Mock()
+        mock_env.name = "test"
+
+        # Create a mock environment that raises exception when accessing port_mappings
+        mock_env.port_mappings = Mock()
+        mock_env.port_mappings.__contains__ = Mock(
+            side_effect=RuntimeError("Port mapping error")
+        )
+
+        mock_manager = Mock()
+        mock_manager.get_current_environment.return_value = mock_env
+        mock_get_manager.return_value = mock_manager
+
+        # Should fall back to predefined mappings when port mapping fails
+        config = get_container_config("apache", use_config_manager=True)
+
+        assert config.container_name == "net-servers-apache-test"
+        # Should fall back to development port mappings
+        assert any(pm.host_port == 8080 for pm in config.port_mappings)
 
     @patch("net_servers.cli_environments._get_config_manager")
     def test_get_container_config_with_environment_port_mappings(
@@ -201,3 +228,37 @@ class TestEnvironmentPortMappingsData:
                     f"Container ports mismatch for {service} between "
                     f"development and {env_name}"
                 )
+
+
+class TestListContainerConfigs:
+    """Test list_container_configs function."""
+
+    def test_list_container_configs_returns_copy(self):
+        """Test that list_container_configs returns a copy of configs."""
+        configs = list_container_configs()
+
+        # Should contain all expected services
+        assert "apache" in configs
+        assert "mail" in configs
+        assert "dns" in configs
+
+        # Should be a copy, not the original
+        configs["test"] = "modified"
+        configs2 = list_container_configs()
+        assert "test" not in configs2
+
+        # Verify configs are proper ContainerConfig objects
+        assert hasattr(configs["apache"], "image_name")
+        assert configs["apache"].image_name == "net-servers-apache"
+
+    def test_list_container_configs_structure(self):
+        """Test the structure of returned container configs."""
+        configs = list_container_configs()
+
+        # Test each service has required attributes
+        for service_name in ["apache", "mail", "dns"]:
+            config = configs[service_name]
+            assert hasattr(config, "image_name")
+            assert hasattr(config, "dockerfile")
+            assert hasattr(config, "container_name")
+            assert config.image_name == f"net-servers-{service_name}"
