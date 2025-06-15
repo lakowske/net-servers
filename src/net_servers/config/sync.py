@@ -385,10 +385,18 @@ class ApacheServiceSynchronizer(ServiceSynchronizer):
         self,
         config_manager: ConfigurationManager,
         container_manager: Optional[ContainerManager] = None,
+        skip_reload: bool = False,
     ):
-        """Initialize Apache service synchronizer."""
+        """Initialize Apache service synchronizer.
+
+        Args:
+            config_manager: Configuration manager instance
+            container_manager: Container manager for executing commands
+            skip_reload: Skip Apache reload for testing environments (default: False)
+        """
         super().__init__(config_manager)
         self.container_manager = container_manager
+        self.skip_reload = skip_reload
 
     def sync_users(self, users: List[UserConfig]) -> bool:
         """Synchronize WebDAV users to Apache authentication."""
@@ -465,57 +473,59 @@ class ApacheServiceSynchronizer(ServiceSynchronizer):
             return False
 
         try:
-            # Clear existing WebDAV password file
-            clear_cmd = ["rm", "-f", "/etc/apache2/.webdav-digest"]
-            result = self.container_manager.execute_command(clear_cmd)
+            # Optimize for tests: build htdigest content locally and write once
+            htdigest_lines = []
 
-            if not result.success:
-                self.logger.warning(
-                    f"Could not clear WebDAV password file: {result.stderr}"
-                )
-
-            # Add each WebDAV user with their current password
             for user in webdav_users:
                 password = self._get_user_webdav_password(user.username)
                 if password:
-                    # Use htdigest to add user with password
-                    htdigest_cmd = [
-                        "bash",
-                        "-c",
-                        f'printf "{password}\\n{password}\\n" | '
-                        f"htdigest -c /etc/apache2/.webdav-digest "
-                        f'"WebDAV Secure Area" "{user.username}"',
-                    ]
+                    # Calculate MD5 hash for digest auth
+                    import hashlib
 
-                    # For first user, use -c flag, for subsequent users omit it
-                    if user != webdav_users[0]:
-                        htdigest_cmd = [
-                            "bash",
-                            "-c",
-                            f'printf "{password}\\n{password}\\n" | '
-                            f"htdigest /etc/apache2/.webdav-digest "
-                            f'"WebDAV Secure Area" "{user.username}"',
-                        ]
-
-                    result = self.container_manager.execute_command(htdigest_cmd)
-
-                    if result.success:
-                        self.logger.info(
-                            f"Updated WebDAV authentication for user: {user.username}"
-                        )
-                    else:
-                        self.logger.error(
-                            f"Failed to update WebDAV auth for {user.username}: "
-                            f"{result.stderr}"
-                        )
-                        return False
+                    realm = "WebDAV Secure Area"
+                    ha1 = hashlib.md5(  # nosec B324
+                        (
+                            f"{user.username}" + ":" + f"{realm}" + ":" + f"{password}"
+                        ).encode()
+                    ).hexdigest()
+                    htdigest_lines.append(
+                        f"{user.username}" + ":" + f"{realm}" + ":" + f"{ha1}"
+                    )
                 else:
                     self.logger.warning(
                         f"No password available for WebDAV user: {user.username}"
                     )
 
-            # Reload Apache to pick up authentication changes
-            return self.reload_service()
+            if htdigest_lines:
+                # Write all users in a single command for better performance
+                htdigest_content = "\\n".join(htdigest_lines)
+                write_cmd = [
+                    "bash",
+                    "-c",
+                    f'printf "{htdigest_content}\\n" > /etc/apache2/.webdav-digest',
+                ]
+
+                result = self.container_manager.execute_command(write_cmd)
+
+                if result.success:
+                    self.logger.info(
+                        f"Updated WebDAV authentication for {len(htdigest_lines)} users"
+                    )
+
+                    # Apache reload is required in production for changes to take effect
+                    # Skip reload only for testing environments to improve performance
+                    if self.skip_reload:
+                        self.logger.debug("Skipping Apache reload (testing mode)")
+                        return True
+                    else:
+                        return self.reload_service()
+                else:
+                    self.logger.error(
+                        f"Failed to write WebDAV auth file: {result.stderr}"
+                    )
+                    return False
+
+            return True
 
         except Exception as e:
             self.logger.error(f"Failed to sync WebDAV authentication: {e}")
