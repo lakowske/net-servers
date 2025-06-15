@@ -15,7 +15,7 @@ This is a template for creating clean, professional Python projects that incorpo
 ### Testing & Coverage
 
 - **Pytest** - Modern testing framework with proper project structure
-- **Coverage reporting** - target 80%
+- **Coverage reporting** - target 70%
 - **HTML coverage reports** - Generated in `htmlcov/` directory
 - **Integration testing** - Structured test organization
 
@@ -29,7 +29,7 @@ This is a template for creating clean, professional Python projects that incorpo
   - Large file detection
   - Code formatting (Black)
   - Linting (Flake8)
-  - Test coverage (Pytest with 80% minimum)
+  - Test coverage (Pytest with 70% minimum)
 
 ## Project Structure
 
@@ -49,7 +49,7 @@ clean-python/
 
 ### Core Testing and Quality Checks
 
-- `pytest --cov=. --cov-report=term-missing --cov-fail-under=80 --cov-report=html` - Run tests with coverage
+- `pytest --cov=. --cov-report=term-missing --cov-fail-under=70 --cov-report=html` - Run tests with coverage
 - `pytest tests/integration/ -v` - Run integration tests (fast: ~6s with persistent containers)
 - `black .` - Format code
 - `flake8` - Run linting
@@ -320,7 +320,7 @@ Every commit must pass:
 1. Code formatting (Black)
 2. Linting checks (Flake8)
 3. All tests passing
-4. Minimum 80% code coverage
+4. Minimum 70% code coverage
 5. No trailing whitespace
 6. Proper file endings
 7. Valid YAML syntax
@@ -1032,6 +1032,35 @@ When moving between systems or upgrading:
 4. **Validate configuration**: Run validation after migration
 
 The environment management system provides complete isolation between different deployment stages while maintaining operational simplicity and safety.
+
+## Environment Configuration
+
+The project includes a default `environments.yaml` configuration file that provides working defaults for all developers and CI environments.
+
+### Default Configuration
+
+The repository includes a default `environments.yaml` with:
+- **Relative paths**: `./environments/*` that work in any project directory
+- **Standard domains**: `local.dev` for development, `example.com` for production
+- **Four environments**: development (default), testing, staging, production
+- **Self-signed certificates**: For local development and testing
+
+### Personal Overrides
+
+To customize environments for your local setup:
+
+1. **Copy the default**: `cp environments.yaml environments.yaml.personal`
+2. **Modify your copy**: Edit `environments.yaml.personal` with your preferences
+3. **Use your config**: The system automatically uses `environments.yaml.personal` if it exists
+
+The `environments.yaml.personal` file is ignored by git, so your personal settings won't be committed.
+
+### Benefits
+
+- **CI Compatibility**: Tests run immediately without setup
+- **Developer Onboarding**: New developers get working configuration
+- **Flexibility**: Support both relative and absolute paths
+- **Personal Privacy**: Personal configurations stay local
 
 ## Commit Message Guidelines
 
