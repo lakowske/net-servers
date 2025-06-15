@@ -1,4 +1,4 @@
-current_environment: development
+current_environment: testing
 environments:
 - name: development
   description: Development environment for local testing
@@ -24,7 +24,7 @@ environments:
   - integration
   - ci-cd
   created_at: '2024-01-01T00:00:00'
-  last_used: '2025-06-15T07:18:28.077208'
+  last_used: '2025-06-15T13:54:31.377969'
   certificate_mode: self_signed
   port_mappings: {}
 - name: staging

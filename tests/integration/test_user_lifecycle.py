@@ -141,8 +141,18 @@ def sync_manager(
     mail_sync = MailServiceSynchronizer(config_manager, mail_container_manager)
     dns_sync = DnsServiceSynchronizer(config_manager, dns_container_manager)
 
+    # Import and register Apache synchronizer for WebDAV
+    from net_servers.config.sync import ApacheServiceSynchronizer
+
+    apache_sync = ApacheServiceSynchronizer(
+        config_manager,
+        apache_container_manager,
+        skip_reload=True,  # Skip Apache reload for test performance
+    )
+
     sync_manager.register_synchronizer("mail", mail_sync)
     sync_manager.register_synchronizer("dns", dns_sync)
+    sync_manager.register_synchronizer("apache", apache_sync)
 
     # Initial sync
     assert sync_manager.sync_all_domains(), "Failed to sync initial domains"
@@ -231,6 +241,28 @@ class TestUserLifecycle:
 
         secrets_file = sync_manager.config_manager.paths.config_path / "secrets.yaml"
         password_manager = PasswordManager(secrets_file)
+
+        # Ensure admin user exists with WebDAV service enabled
+        admin_user = UserConfig(
+            username="admin",
+            email="admin@local.dev",
+            domains=["local.dev"],
+            roles=["admin"],
+            services=["email", "webdav"],  # Enable WebDAV service
+        )
+
+        # Add or update admin user in configuration
+        success = sync_manager.add_user(admin_user)
+        if not success:
+            # User might already exist, try to update
+            current_users = sync_manager.config_manager.users_config.users
+            for i, user in enumerate(current_users):
+                if user.username == "admin":
+                    current_users[i] = admin_user
+                    break
+            sync_manager.config_manager.save_users_config(
+                sync_manager.config_manager.users_config
+            )
 
         # Set up admin user password for testing
         admin_password = "admin_secure_password"
@@ -541,6 +573,38 @@ class TestUserLifecycle:
         secrets_file = sync_manager.config_manager.paths.config_path / "secrets.yaml"
         password_manager = PasswordManager(secrets_file)
 
+        # Set up test users with WebDAV service enabled
+        test_users_config = [
+            UserConfig(
+                username="admin",
+                email="admin@local.dev",
+                domains=["local.dev"],
+                roles=["admin"],
+                services=["email", "webdav"],
+            ),
+            UserConfig(
+                username="test1",
+                email="test1@local.dev",
+                domains=["local.dev"],
+                roles=["user"],
+                services=["email", "webdav"],
+            ),
+        ]
+
+        # Add/update users in configuration
+        for user_config in test_users_config:
+            success = sync_manager.add_user(user_config)
+            if not success:
+                # User might already exist, try to update
+                current_users = sync_manager.config_manager.users_config.users
+                for i, user in enumerate(current_users):
+                    if user.username == user_config.username:
+                        current_users[i] = user_config
+                        break
+                sync_manager.config_manager.save_users_config(
+                    sync_manager.config_manager.users_config
+                )
+
         # Set up test passwords for WebDAV testing
         test_users = [
             {"username": "admin", "password": "admin_secure_password"},
@@ -699,34 +763,14 @@ class TestUserLifecycle:
 
             auth = HTTPDigestAuth(username, password)
 
-            # Upload file using PUT request with SSL retry logic
-            session = requests.Session()
-            session.verify = False
-
-            # Try with different SSL configurations
-            for attempt in range(3):
-                try:
-                    response = session.put(
-                        webdav_url,
-                        data=content,
-                        auth=auth,
-                        timeout=10,  # Longer timeout
-                    )
-                    break  # Success, exit retry loop
-                except requests.exceptions.SSLError as e:
-                    if attempt == 2:  # Last attempt
-                        print(f"SSL error on attempt {attempt + 1}: {e}")
-                        session.close()
-                        return False
-                    time.sleep(1)  # Wait before retry
-                except Exception as e:
-                    if attempt == 2:  # Last attempt
-                        print(f"Request error on attempt {attempt + 1}: {e}")
-                        session.close()
-                        return False
-                    time.sleep(1)
-
-            session.close()
+            # Upload file using PUT request - simplified for test performance
+            response = requests.put(
+                webdav_url,
+                data=content,
+                auth=auth,
+                verify=False,  # Self-signed certificates
+                timeout=3,  # Shorter timeout for tests
+            )
 
             # WebDAV PUT should return 201 (Created) or 204 (No Content)
             return response.status_code in [201, 204]
@@ -762,38 +806,13 @@ class TestUserLifecycle:
 
             auth = HTTPDigestAuth(username, password)
 
-            # Download file using GET request with SSL retry logic
-            session = requests.Session()
-            session.verify = False
-
-            # Try with retry logic for SSL issues
-            for attempt in range(3):
-                try:
-                    response = session.get(
-                        webdav_url,
-                        auth=auth,
-                        timeout=10,
-                    )
-                    break  # Success, exit retry loop
-                except requests.exceptions.SSLError as e:
-                    if attempt == 2:  # Last attempt
-                        print(
-                            f"SSL error during download on attempt {attempt + 1}: {e}"
-                        )
-                        session.close()
-                        return False
-                    time.sleep(1)
-                except Exception as e:
-                    if attempt == 2:  # Last attempt
-                        print(
-                            f"Request error during download on attempt "
-                            f"{attempt + 1}: {e}"
-                        )
-                        session.close()
-                        return False
-                    time.sleep(1)
-
-            session.close()
+            # Download file using GET request - simplified for test performance
+            response = requests.get(
+                webdav_url,
+                auth=auth,
+                verify=False,  # Self-signed certificates
+                timeout=3,  # Shorter timeout for tests
+            )
 
             # Check if download was successful and content matches
             if response.status_code == 200:
@@ -854,7 +873,7 @@ class TestUserLifecycle:
                 headers=headers,
                 auth=auth,
                 verify=False,  # Self-signed certificates
-                timeout=5,
+                timeout=2,  # Shorter timeout for tests
             )
 
             # PROPFIND should return 207 Multi-Status

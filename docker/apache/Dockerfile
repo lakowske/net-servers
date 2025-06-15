@@ -15,7 +15,7 @@ ENV APACHE_RUN_USER=www-data \
     APACHE_LOCK_DIR=/var/lock/apache2 \
     DEBIAN_FRONTEND=noninteractive
 
-# Update package list and install Apache with SSL support and Python for CLI
+# Update package list and install Apache with SSL support, Git, Gitweb, and Python for CLI
 RUN apt-get update && \
     apt-get install -y \
         apache2 \
@@ -31,6 +31,8 @@ RUN apt-get update && \
         python3 \
         python3-pip \
         python3-venv \
+        git \
+        gitweb \
         && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -38,22 +40,30 @@ RUN apt-get update && \
 # Copy configuration files
 COPY docker/apache/config/apache-extra.conf /etc/apache2/conf-available/
 COPY docker/apache/config/webdav.conf /etc/apache2/conf-available/
+COPY docker/apache/config/gitweb.conf /etc/apache2/conf-available/
+COPY docker/apache/config/gitweb-config.perl /etc/gitweb.conf
 COPY docker/apache/config/000-default.conf /etc/apache2/sites-available/
 COPY docker/apache/config/ssl-vhost.conf /etc/apache2/sites-available/
 COPY docker/apache/config/start-apache.sh /usr/local/bin/
 COPY docker/apache/content/index.html /var/www/html/
+COPY docker/apache/content/index.cgi /var/www/html/
 COPY docker/apache/content/webdav-header.html /var/www/webdav/
 COPY docker/apache/content/webdav-footer.html /var/www/webdav/
+COPY docker/apache/content/gitweb-header.html /var/www/
+COPY docker/apache/content/gitweb-footer.html /var/www/
 
-# Configure Apache with SSL and WebDAV support
+# Configure Apache with SSL, WebDAV, and Gitweb support
 RUN a2enconf apache-extra && \
     a2enconf webdav && \
-    a2enmod rewrite headers deflate ssl dav dav_fs dav_lock auth_digest && \
+    a2enconf gitweb && \
+    a2enmod rewrite headers deflate ssl dav dav_fs dav_lock auth_digest cgi && \
     a2ensite 000-default && \
     chmod +x /usr/local/bin/start-apache.sh && \
     mkdir -p /data/state/certificates && \
     mkdir -p /var/www/webdav && \
-    mkdir -p /var/lock/apache2/webdav
+    mkdir -p /var/lock/apache2/webdav && \
+    mkdir -p /var/git/repositories && \
+    chown -R www-data:www-data /var/git
 
 # Set proper ownership and permissions
 RUN chown -R www-data:www-data /var/www/html && \
@@ -61,6 +71,7 @@ RUN chown -R www-data:www-data /var/www/html && \
     chown -R www-data:www-data /var/lock/apache2/webdav && \
     chmod 755 /var/www/webdav && \
     chmod 755 /var/lock/apache2/webdav && \
+    chmod +x /var/www/html/index.cgi && \
     mkdir -p ${APACHE_RUN_DIR} ${APACHE_LOCK_DIR} ${APACHE_LOG_DIR} && \
     chown -R www-data:www-data ${APACHE_LOG_DIR} ${APACHE_RUN_DIR} ${APACHE_LOCK_DIR} && \
     chmod 755 ${APACHE_LOG_DIR} ${APACHE_RUN_DIR} ${APACHE_LOCK_DIR}

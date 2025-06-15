@@ -33,6 +33,28 @@ chown www-data:www-data "$WEBDAV_PASSWORD_FILE"
 
 echo "WebDAV authentication setup complete - managed by configuration sync system"
 
+# Setup Git repositories directory
+GIT_REPO_DIR="/var/git/repositories"
+mkdir -p "$GIT_REPO_DIR"
+chown -R www-data:www-data "$GIT_REPO_DIR"
+
+# Create sample repositories if they don't exist
+if [ ! -d "$GIT_REPO_DIR/sample.git" ]; then
+    echo "Creating sample Git repository..."
+    cd "$GIT_REPO_DIR"
+
+    # Create a sample bare repository
+    git init --bare sample.git
+    chown -R www-data:www-data sample.git
+
+    # Set repository description
+    echo "Sample Git repository for testing Gitweb interface" > sample.git/description
+
+    echo "Sample Git repository created at $GIT_REPO_DIR/sample.git"
+fi
+
+echo "Gitweb setup complete - repositories available at /var/git/repositories"
+
 # Configure SSL if enabled and certificates exist
 if [ "$SSL_ENABLED" = "true" ]; then
     echo "SSL enabled, checking for certificates..."
