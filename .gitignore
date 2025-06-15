@@ -174,3 +174,6 @@ cython_debug/
 environments/
 # Personal environment configurations
 environments.yaml.personal
+# Test environment configuration (generated for pre-commit isolation)
+environments-test.yaml
+environments.yaml.backup

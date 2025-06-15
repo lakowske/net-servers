@@ -276,11 +276,15 @@ def get_default_volumes(base_path: str = "/data") -> List[tuple]:
 
     return [
         # Configuration volume (read-write for dynamic updates)
-        (str(paths.config_path), "/data/config", False),
+        (str(paths.config_path.resolve()), "/data/config", False),
         # State volume (read-write for persistent data)
-        (str(paths.state_path), "/data/state", False),
+        (str(paths.state_path.resolve()), "/data/state", False),
         # Logs volume (read-write for log files)
-        (str(paths.logs_path), "/data/logs", False),
+        (str(paths.logs_path.resolve()), "/data/logs", False),
         # Code volume (read-only in production, read-write in development)
-        (str(paths.code_path), "/data/code", False),  # Set to True for production
+        (
+            str(paths.code_path.resolve()),
+            "/data/code",
+            False,
+        ),  # Set to True for production
     ]

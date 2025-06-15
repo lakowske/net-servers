@@ -49,12 +49,13 @@ clean-python/
 
 ### Core Testing and Quality Checks
 
-- `pytest --cov=. --cov-report=term-missing --cov-fail-under=70 --cov-report=html` - Run tests with coverage
+- `./scripts/run-tests.sh` - Run all tests with environment switching (recommended)
+- `pytest --cov=. --cov-report=term-missing --cov-fail-under=80 --cov-report=html` - Run tests with coverage (manual)
 - `pytest tests/integration/ -v` - Run integration tests (fast: ~6s with persistent containers)
 - `black .` - Format code
 - `flake8` - Run linting
 - `pre-commit install` - Install pre-commit hooks
-- `pre-commit run --all-files` - Run all pre-commit checks
+- `pre-commit run --all-files` - Run all pre-commit checks (auto-switches to testing environment)
 
 ### Pre-Commit Testing Workflow
 
@@ -268,7 +269,7 @@ dig @127.0.0.1 -p 5353 local.dev
 
 #### Expected Test Results
 
-- ✅ **Unit tests**: All 196+ tests should pass
+- ✅ **Unit tests**: All 350+ tests should pass
 - ✅ **Basic container functionality**: Container startup and basic connectivity
 - ⚠️ **DNS resolution tests**: May fail due to system resolver conflicts (expected)
 - ✅ **Apache/Mail services**: Should work properly with port mapping
@@ -320,12 +321,48 @@ Every commit must pass:
 1. Code formatting (Black)
 2. Linting checks (Flake8)
 3. All tests passing
-4. Minimum 70% code coverage
+4. Minimum 80% code coverage
 5. No trailing whitespace
 6. Proper file endings
 7. Valid YAML syntax
 
 This template ensures that code quality, testing, and documentation standards are maintained throughout the development lifecycle.
+
+### Pre-commit Testing Environment
+
+The pre-commit system uses **complete isolation** to ensure tests don't interfere with your working environment:
+
+**Isolated Test Environment**: Pre-commit tests run with a separate `environments-test.yaml` file that contains only a `testing` environment configuration. This file is:
+- **Automatically generated** if it doesn't exist
+- **Not tracked in git** (added to `.gitignore`)
+- **Completely isolated** from your working `environments.yaml`
+
+**Environment Isolation Process**: The test script (`./scripts/run-tests.sh`):
+1. Creates isolated `environments-test.yaml` if needed
+2. Backs up your working `environments.yaml`
+3. Temporarily replaces it with the test configuration
+4. Runs all tests in the isolated `testing` environment
+5. Restores your original `environments.yaml` on completion
+
+**Environment-Aware Testing**: Tests use environment-specific container names (e.g., `net-servers-apache-testing`) to ensure proper isolation and consistent test expectations.
+
+**Manual Test Execution**: For manual testing with the same isolation, use:
+```bash
+./scripts/run-tests.sh
+```
+
+**Developer Workflow Benefits**:
+- **Your environment is never modified** during pre-commit tests
+- **Work in any environment** without affecting test results
+- **Test isolation** ensures consistent, reproducible results
+- **No commit conflicts** from environment timestamp updates
+
+**Files Involved**:
+- `environments.yaml` - Your working environment configuration (tracked)
+- `environments-test.yaml` - Isolated test configuration (not tracked)
+- `environments.yaml.backup` - Temporary backup during tests (not tracked)
+
+All 350+ tests must pass with minimum 80% coverage before commits are accepted.
 
 ## Coding Standards and Common Issues
 

@@ -115,10 +115,11 @@ class TestEnvironmentsCLI:
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    @patch("net_servers.cli_environments._get_config_manager")
-    def test_list_environments_success(self, mock_get_config_manager):
+    @patch("net_servers.cli_environments._get_environments_config")
+    def test_list_environments_success(self, mock_get_environments_config):
         """Test successful environment listing."""
-        mock_manager = Mock()
+        from net_servers.config.manager import EnvironmentsConfig
+
         mock_env1 = EnvironmentConfig(
             name="development",
             description="Development environment",
@@ -139,9 +140,11 @@ class TestEnvironmentsCLI:
             created_at="2024-01-01T00:00:00",
             last_used="2024-01-01T00:00:00",
         )
-        mock_manager.list_environments.return_value = [mock_env1, mock_env2]
-        mock_manager.environments_config.current_environment = "development"
-        mock_get_config_manager.return_value = mock_manager
+
+        mock_config = EnvironmentsConfig(
+            current_environment="development", environments=[mock_env1, mock_env2]
+        )
+        mock_get_environments_config.return_value = ("/fake/path", mock_config)
 
         result = self.runner.invoke(list_environments)
 

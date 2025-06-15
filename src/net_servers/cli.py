@@ -207,7 +207,7 @@ def run(
 def stop(config: str) -> None:
     """Stop running container."""
     try:
-        container_config = get_container_config(config, use_config_manager=False)
+        container_config = get_container_config(config, use_config_manager=True)
         manager = ContainerManager(container_config)
         result = manager.stop()
 
@@ -233,7 +233,7 @@ def stop(config: str) -> None:
 def remove(config: str, force: bool) -> None:
     """Remove container."""
     try:
-        container_config = get_container_config(config, use_config_manager=False)
+        container_config = get_container_config(config, use_config_manager=True)
         manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
 
@@ -313,7 +313,7 @@ def list_containers(all: bool) -> None:
 def logs(config: str, follow: bool, tail: Optional[int]) -> None:
     """Show container logs."""
     try:
-        container_config = get_container_config(config, use_config_manager=False)
+        container_config = get_container_config(config, use_config_manager=True)
         manager = ContainerManager(container_config)
         result = manager.logs(follow=follow, tail=tail)
 
@@ -398,7 +398,7 @@ def stop_all() -> None:
 
     for name, _ in configs.items():
         click.echo(f"Stopping {name}...")
-        container_config = get_container_config(name, use_config_manager=False)
+        container_config = get_container_config(name, use_config_manager=True)
         manager = ContainerManager(container_config)
         result = manager.stop()
 
@@ -426,7 +426,7 @@ def remove_all(force: bool) -> None:
 
     for name, _ in configs.items():
         click.echo(f"Removing container {name}...")
-        container_config = get_container_config(name, use_config_manager=False)
+        container_config = get_container_config(name, use_config_manager=True)
         manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
 
@@ -483,7 +483,7 @@ def clean_all(force: bool) -> None:
     click.echo("Stopping all containers...")
     configs = list_container_configs()
     for name in configs.keys():
-        container_config = get_container_config(name, use_config_manager=False)
+        container_config = get_container_config(name, use_config_manager=True)
         manager = ContainerManager(container_config)
         result = manager.stop()
         if result.success:
@@ -492,7 +492,7 @@ def clean_all(force: bool) -> None:
     # Remove all containers
     click.echo("Removing all containers...")
     for name in configs.keys():
-        container_config = get_container_config(name, use_config_manager=False)
+        container_config = get_container_config(name, use_config_manager=True)
         manager = ContainerManager(container_config)
         result = manager.remove_container(force=force)
         if result.success:

@@ -363,14 +363,16 @@ class TestVolumeHelpers:
 
     def test_get_default_volumes_custom_path(self):
         """Test get_default_volumes with custom base path."""
+        from pathlib import Path
+
         custom_base = "/tmp/test-data"
         volumes = get_default_volumes(custom_base)
 
         expected_volumes = [
-            ("/tmp/test-data/config", "/data/config", False),
-            ("/tmp/test-data/state", "/data/state", False),
-            ("/tmp/test-data/logs", "/data/logs", False),
-            ("/tmp/test-data/code", "/data/code", False),
+            (str(Path("/tmp/test-data/config").resolve()), "/data/config", False),
+            (str(Path("/tmp/test-data/state").resolve()), "/data/state", False),
+            (str(Path("/tmp/test-data/logs").resolve()), "/data/logs", False),
+            (str(Path("/tmp/test-data/code").resolve()), "/data/code", False),
         ]
 
         assert volumes == expected_volumes

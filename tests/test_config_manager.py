@@ -284,11 +284,13 @@ class TestConfigurationManager:
 
             # Check volume types
             volume_paths = [(v.host_path, v.container_path) for v in volumes]
+            from pathlib import Path
+
             expected_paths = [
-                (f"{temp_dir}/config", "/data/config"),
-                (f"{temp_dir}/state", "/data/state"),
-                (f"{temp_dir}/logs", "/data/logs"),
-                (f"{temp_dir}/code", "/data/code"),
+                (str(Path(f"{temp_dir}/config").resolve()), "/data/config"),
+                (str(Path(f"{temp_dir}/state").resolve()), "/data/state"),
+                (str(Path(f"{temp_dir}/logs").resolve()), "/data/logs"),
+                (str(Path(f"{temp_dir}/code").resolve()), "/data/code"),
             ]
 
             for expected in expected_paths:

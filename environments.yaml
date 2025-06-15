@@ -10,7 +10,7 @@ environments:
   - development
   - local
   created_at: '2024-01-01T00:00:00'
-  last_used: '2024-01-01T00:00:00'
+  last_used: '2025-06-15T07:18:35.072407'
   certificate_mode: self_signed
   port_mappings: {}
 - name: testing
@@ -24,7 +24,7 @@ environments:
   - integration
   - ci-cd
   created_at: '2024-01-01T00:00:00'
-  last_used: '2024-01-01T00:00:00'
+  last_used: '2025-06-15T07:18:28.077208'
   certificate_mode: self_signed
   port_mappings: {}
 - name: staging

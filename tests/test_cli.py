@@ -200,7 +200,7 @@ class TestCLI:
         result = runner.invoke(cli, ["container", "stop", "-c", "apache"])
 
         assert result.exit_code == 0
-        assert "Container net-servers-apache-default stopped" in result.output
+        assert "Container net-servers-apache-testing stopped" in result.output
         mock_manager.stop.assert_called_once()
 
     @patch("net_servers.cli.ContainerManager")
@@ -218,7 +218,7 @@ class TestCLI:
         result = runner.invoke(cli, ["container", "remove", "-c", "apache"])
 
         assert result.exit_code == 0
-        assert "Container net-servers-apache-default removed" in result.output
+        assert "Container net-servers-apache-testing removed" in result.output
         mock_manager.remove_container.assert_called_once_with(force=False)
 
     @patch("net_servers.cli.ContainerManager")
@@ -835,7 +835,7 @@ class TestCLIErrorHandling:
         result = runner.invoke(cli, ["container", "stop", "-c", "apache"])
 
         assert result.exit_code == 0
-        assert "Container net-servers-apache-default stopped" in result.output
+        assert "Container net-servers-apache-testing stopped" in result.output
 
 
 class TestIntegrationTestCommand:
