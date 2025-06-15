@@ -32,6 +32,8 @@ class CertificateConfig:
 
     def __post_init__(self) -> None:
         """Set default paths if not provided."""
+        # Note: Default paths will be overridden by CertificateManager
+        # when using with ConfigurationManager environment-specific paths
         if not self.cert_path:
             base_path = f"/data/state/certificates/{self.domain}"
             self.cert_path = f"{base_path}/cert.pem"

@@ -67,10 +67,10 @@ class TestEnvironmentsCLI:
         assert "staging" in result.output
         assert "Development environment" in result.output
 
-    @patch("net_servers.cli_environments._get_config_manager")
-    def test_list_environments_error(self, mock_get_config_manager):
+    @patch("net_servers.cli_environments._get_environments_config")
+    def test_list_environments_error(self, mock_get_environments_config):
         """Test environment listing error handling."""
-        mock_get_config_manager.side_effect = Exception("Config error")
+        mock_get_environments_config.side_effect = Exception("Config error")
 
         result = self.runner.invoke(list_environments)
 
@@ -111,10 +111,14 @@ class TestEnvironmentsCLI:
         assert result.exit_code == 1
         assert "Error getting current environment" in result.output
 
-    @patch("net_servers.cli_environments._get_config_manager")
-    def test_switch_environment_success(self, mock_get_config_manager):
+    @patch("net_servers.cli_environments._get_environments_config")
+    @patch("net_servers.cli_environments._save_environments_config")
+    @patch("net_servers.config.schemas.ConfigurationPaths")
+    def test_switch_environment_success(
+        self, mock_paths, mock_save_config, mock_get_environments_config
+    ):
         """Test successful environment switching."""
-        mock_manager = Mock()
+        # Mock environment
         mock_env = EnvironmentConfig(
             name="staging",
             description="Staging environment",
@@ -125,8 +129,22 @@ class TestEnvironmentsCLI:
             created_at="2024-01-01T00:00:00",
             last_used="2024-01-01T00:00:00",
         )
-        mock_manager.switch_environment.return_value = mock_env
-        mock_get_config_manager.return_value = mock_manager
+
+        # Mock environments config
+        from net_servers.config.schemas import EnvironmentsConfig
+
+        mock_env_config = EnvironmentsConfig(
+            current_environment="development", environments=[mock_env]
+        )
+
+        mock_get_environments_config.return_value = (
+            "/test/config/environments.yaml",
+            mock_env_config,
+        )
+
+        # Mock configuration paths
+        mock_paths_instance = Mock()
+        mock_paths.return_value = mock_paths_instance
 
         result = self.runner.invoke(switch_environment, ["staging"])
 
@@ -262,66 +280,69 @@ class TestInitEnvironments:
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    @patch("net_servers.cli_environments.Path.home")
     @patch("net_servers.cli_environments.ConfigurationManager")
-    def test_init_environments_success(self, mock_config_manager, mock_home):
+    def test_init_environments_success(self, mock_config_manager):
         """Test successful environment initialization."""
-        mock_home.return_value = Path(self.temp_dir)
-
         # Mock the configuration manager
         mock_manager_instance = Mock()
         mock_manager_instance.list_environments.return_value = []
         mock_manager_instance.environments_config.current_environment = "development"
         mock_config_manager.return_value = mock_manager_instance
 
-        result = self.runner.invoke(init_environments)
+        # Use isolated filesystem for testing
+        with self.runner.isolated_filesystem():
+            result = self.runner.invoke(init_environments)
 
-        assert result.exit_code == 0
-        assert "Initialized environments configuration" in result.output
+            assert result.exit_code == 0
+            assert "Created environments configuration" in result.output
 
-        # Check that directories were created
-        config_path = Path(self.temp_dir) / ".net-servers" / "config"
-        assert config_path.exists()
+            # Check that files were created in current directory
+            config_file = Path("./environments.yaml")
+            assert config_file.exists()
 
-    @patch("net_servers.cli_environments.Path.home")
-    def test_init_environments_existing_config(self, mock_home):
+            # Verify the content structure
+            import yaml
+
+            with open(config_file) as f:
+                config_data = yaml.safe_load(f)
+
+            assert config_data["current_environment"] == "development"
+            assert (
+                len(config_data["environments"]) == 4
+            )  # dev, staging, testing, production
+
+    def test_init_environments_existing_config(self):
         """Test initialization with existing config."""
-        mock_home.return_value = Path(self.temp_dir)
+        # Use isolated filesystem for testing
+        with self.runner.isolated_filesystem():
+            # Create existing config
+            config_file = Path("./environments.yaml")
+            config_file.touch()
 
-        # Create existing config
-        config_path = Path(self.temp_dir) / ".net-servers" / "config"
-        config_path.mkdir(parents=True)
-        (config_path / "environments.yaml").touch()
+            result = self.runner.invoke(init_environments)
 
-        result = self.runner.invoke(init_environments)
+            assert result.exit_code == 0
+            assert "Environments configuration already exists" in result.output
 
-        assert result.exit_code == 0
-        assert "Environments configuration already exists" in result.output
-
-    @patch("net_servers.cli_environments.Path.home")
-    def test_init_environments_force_flag(self, mock_home):
+    @patch("net_servers.cli_environments.ConfigurationManager")
+    def test_init_environments_force_flag(self, mock_config_manager):
         """Test initialization with force flag."""
-        mock_home.return_value = Path(self.temp_dir)
+        # Mock the configuration manager
+        mock_manager_instance = Mock()
+        mock_manager_instance.list_environments.return_value = []
+        mock_manager_instance.environments_config.current_environment = "development"
+        mock_config_manager.return_value = mock_manager_instance
 
-        # Create existing config
-        config_path = Path(self.temp_dir) / ".net-servers" / "config"
-        config_path.mkdir(parents=True)
-        (config_path / "environments.yaml").touch()
-
-        with patch(
-            "net_servers.cli_environments.ConfigurationManager"
-        ) as mock_config_manager:
-            mock_manager_instance = Mock()
-            mock_manager_instance.list_environments.return_value = []
-            mock_manager_instance.environments_config.current_environment = (
-                "development"
-            )
-            mock_config_manager.return_value = mock_manager_instance
+        # Use isolated filesystem for testing
+        with self.runner.isolated_filesystem():
+            # Create existing config
+            config_file = Path("./environments.yaml")
+            config_file.touch()
 
             result = self.runner.invoke(init_environments, ["--force"])
 
             assert result.exit_code == 0
-            assert "Initialized environments configuration" in result.output
+            assert "Created environments configuration" in result.output
 
 
 class TestEnvironmentHelpers:

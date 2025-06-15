@@ -28,6 +28,24 @@ PRODUCTION_PORT_MAPPINGS = {
 
 # Environment-specific port mappings (to avoid conflicts between environments)
 ENVIRONMENT_PORT_MAPPINGS = {
+    "default": {
+        "apache": [
+            PortMapping(host_port=8080, container_port=80),
+            PortMapping(host_port=8443, container_port=443),
+        ],
+        "mail": [
+            PortMapping(host_port=2525, container_port=25),  # SMTP
+            PortMapping(host_port=1144, container_port=143),  # IMAP
+            PortMapping(host_port=1110, container_port=110),  # POP3
+            PortMapping(host_port=9993, container_port=993),  # IMAPS
+            PortMapping(host_port=9995, container_port=995),  # POP3S
+            PortMapping(host_port=5870, container_port=587),  # SMTP submission
+        ],
+        "dns": [
+            PortMapping(host_port=5354, container_port=53, protocol="udp"),
+            PortMapping(host_port=5354, container_port=53, protocol="tcp"),
+        ],
+    },
     "development": {
         "apache": [
             PortMapping(host_port=8080, container_port=80),
@@ -152,20 +170,23 @@ def get_container_config(
     # Auto-detect environment if not provided and config manager is available
     if environment_name is None and use_config_manager:
         try:
-            import os
+            # Use environment-aware configuration (no fallbacks)
+            # Import here to avoid circular imports
+            from net_servers.cli_environments import _get_config_manager
 
-            base_path = (
-                "/data"
-                if os.path.exists("/data")
-                else os.path.expanduser("~/.net-servers")
-            )
-            config_manager = ConfigurationManager(base_path)
+            config_manager = _get_config_manager()
             current_env = config_manager.get_current_environment()
             environment_name = current_env.name
-        except Exception:
-            environment_name = "development"
+        except Exception as e:
+            # Re-raise with helpful message instead of silent fallback
+            raise RuntimeError(
+                f"Failed to load environment configuration: {e}. "
+                f"Initialize environments with: "
+                f"python -m net_servers.cli environments init"
+            ) from e
     elif environment_name is None:
-        environment_name = "development"
+        # When not using config manager, default to "default" environment
+        environment_name = "default"
 
     # Determine port mappings and container name based on environment
     base_name = original.container_name or ""
@@ -191,19 +212,29 @@ def get_container_config(
     # Enhance with configuration management if enabled
     if use_config_manager:
         try:
-            # Use a local data directory for testing if /data doesn't exist
             import os
 
+            # Use a local data directory for testing if /data doesn't exist
             base_path = (
                 "/data"
                 if os.path.exists("/data")
                 else os.path.expanduser("~/.net-servers")
             )
-            config_manager = ConfigurationManager(base_path)
+
+            # Get environments config path for ConfigurationManager
+            from net_servers.cli_environments import _get_environments_config_path
+
+            env_config_path = _get_environments_config_path()
+
+            config_manager = ConfigurationManager(
+                base_path, environments_config_path=env_config_path
+            )
 
             # Get current environment and use its base path for container volumes
             current_env = config_manager.get_current_environment()
-            env_config_manager = ConfigurationManager(current_env.base_path)
+            env_config_manager = ConfigurationManager(
+                current_env.base_path, environments_config_path=env_config_path
+            )
             env_config_manager.initialize_default_configs()
 
             config = env_config_manager.enhance_container_config(

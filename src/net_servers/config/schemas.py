@@ -197,6 +197,10 @@ class EnvironmentConfig(BaseModel):
     tags: List[str] = Field(default_factory=list, description="Environment tags")
     created_at: str = Field(..., description="Creation timestamp")
     last_used: str = Field(..., description="Last used timestamp")
+    certificate_mode: str = Field(
+        default="self_signed",
+        description="Default certificate mode (self_signed, le_staging, le_production)",
+    )
 
 
 class EnvironmentsConfig(BaseModel):

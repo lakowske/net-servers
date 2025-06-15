@@ -543,6 +543,16 @@ def test_integration(
     """Run integration tests for container services."""
     import subprocess
 
+    # Show current environment info
+    try:
+        from net_servers.cli_environments import _get_config_manager
+
+        config_manager = _get_config_manager()
+        current_env = config_manager.get_current_environment()
+        click.echo(f"Running integration tests in environment: {current_env.name}")
+    except Exception:
+        click.echo("Running integration tests in current environment")
+
     # Check if pytest is available
     try:
         subprocess.run(  # nosec B607

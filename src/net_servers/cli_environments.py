@@ -8,14 +8,108 @@ from typing import List
 import click
 
 from net_servers.config.manager import ConfigurationManager
+from net_servers.config.schemas import EnvironmentsConfig
+
+
+def _get_environments_config_path() -> str:
+    """Get the path to environments.yaml file.
+
+    Priority:
+    1. Environment variable NET_SERVERS_CONFIG
+    2. ./environments.yaml (project workspace default)
+    3. /data/environments.yaml (container environment)
+    """
+    # Check environment variable first
+    config_path = os.environ.get("NET_SERVERS_CONFIG")
+    if config_path and os.path.exists(config_path):
+        return config_path
+
+    # Container environment
+    if os.path.exists("/data"):
+        container_config = "/data/environments.yaml"
+        if os.path.exists(container_config):
+            return container_config
+
+    # Default to project workspace
+    return os.path.abspath("./environments.yaml")
+
+
+def _get_environments_base_path() -> str:
+    """Get the base path for environment directories.
+
+    Priority:
+    1. Environment variable NET_SERVERS_ENVIRONMENTS_DIR
+    2. ./environments (project workspace default)
+    3. /data/environments (container environment)
+    """
+    # Check environment variable first
+    base_path = os.environ.get("NET_SERVERS_ENVIRONMENTS_DIR")
+    if base_path:
+        return os.path.abspath(base_path)
+
+    # Container environment
+    if os.path.exists("/data"):
+        return "/data/environments"
+
+    # Default to project workspace
+    return os.path.abspath("./environments")
 
 
 def _get_config_manager() -> ConfigurationManager:
-    """Get configuration manager with proper base path detection."""
-    base_path = (
-        "/data" if os.path.exists("/data") else os.path.expanduser("~/.net-servers")
+    """Get configuration manager for the current environment."""
+    # Get environments configuration file path
+    env_config_file = Path(_get_environments_config_path())
+    env_config_path = str(env_config_file)
+
+    if not env_config_file.exists():
+        raise FileNotFoundError(
+            f"Environments configuration not found at {env_config_file}. "
+            f"Initialize environments with: python -m net_servers.cli environments init"
+        )
+
+    # Load environments config to get current environment
+    from net_servers.config.schemas import EnvironmentsConfig, load_yaml_config
+
+    env_config = load_yaml_config(env_config_file, EnvironmentsConfig)
+
+    # Find current environment
+    current_env_name = env_config.current_environment
+    current_env = None
+    for env in env_config.environments:
+        if env.name == current_env_name:
+            current_env = env
+            break
+
+    if current_env is None:
+        available_envs = [e.name for e in env_config.environments]
+        raise ValueError(
+            f"Current environment '{current_env_name}' not found in "  # noqa: E713
+            f"environments configuration. Available environments: {available_envs}"
+        )
+
+    # Return ConfigurationManager for current environment
+    return ConfigurationManager(
+        current_env.base_path, environments_config_path=env_config_path
     )
-    return ConfigurationManager(base_path)
+
+
+def _get_environments_config() -> tuple[str, EnvironmentsConfig]:
+    """Load environments configuration."""
+    env_config_file = Path(_get_environments_config_path())
+
+    from net_servers.config.schemas import EnvironmentsConfig, load_yaml_config
+
+    env_config = load_yaml_config(env_config_file, EnvironmentsConfig)
+    return str(env_config_file), env_config
+
+
+def _save_environments_config(env_config: EnvironmentsConfig) -> None:
+    """Save environments configuration."""
+    env_config_file = Path(_get_environments_config_path())
+
+    from net_servers.config.schemas import save_yaml_config
+
+    save_yaml_config(env_config, env_config_file)
 
 
 @click.group()
@@ -31,9 +125,9 @@ def environments() -> None:
 def list_environments(current_only: bool, enabled_only: bool, format: str) -> None:
     """List all environments."""
     try:
-        config_manager = _get_config_manager()
-        environments = config_manager.list_environments()
-        current_env = config_manager.environments_config.current_environment
+        _, env_config = _get_environments_config()
+        environments = env_config.environments
+        current_env = env_config.current_environment
 
         if current_only:
             environments = [env for env in environments if env.name == current_env]
@@ -88,6 +182,7 @@ def show_current() -> None:
         click.echo(f"Domain: {current_env.domain}")
         click.echo(f"Base Path: {current_env.base_path}")
         click.echo(f"Admin Email: {current_env.admin_email}")
+        click.echo(f"Certificate Mode: {current_env.certificate_mode}")
         click.echo(f"Tags: {', '.join(current_env.tags)}")
         click.echo(f"Enabled: {'Yes' if current_env.enabled else 'No'}")
         click.echo(f"Created: {current_env.created_at}")
@@ -100,12 +195,70 @@ def show_current() -> None:
 
 @environments.command("switch")
 @click.argument("name")
-def switch_environment(name: str) -> None:
+@click.option(
+    "--provision-certs",
+    is_flag=True,
+    help="Automatically provision certificates for the environment",
+)
+def switch_environment(name: str, provision_certs: bool) -> None:
     """Switch to a different environment."""
     try:
-        config_manager = _get_config_manager()
-        env = config_manager.switch_environment(name)
-        click.echo(f"Switched to environment '{env.name}' at {env.base_path}")
+        # Load environments config
+        _, env_config = _get_environments_config()
+
+        # Find target environment
+        target_env = None
+        for env in env_config.environments:
+            if env.name == name:
+                target_env = env
+                break
+
+        if not target_env:
+            raise ValueError(f"Environment '{name}' not found")
+
+        if not target_env.enabled:
+            raise ValueError(f"Environment '{name}' is disabled")
+
+        # Update current environment and last used timestamp
+        from datetime import datetime
+
+        target_env.last_used = datetime.now().isoformat()
+        env_config.current_environment = name
+
+        # Save updated config
+        _save_environments_config(env_config)
+
+        # Ensure environment directory structure exists
+        from net_servers.config.schemas import ConfigurationPaths
+
+        env_paths = ConfigurationPaths(base_path=Path(target_env.base_path))
+        env_paths.ensure_directories()
+
+        click.echo(
+            f"Switched to environment '{target_env.name}' at {target_env.base_path}"
+        )
+
+        # Optionally provision certificates
+        if provision_certs:
+            click.echo(
+                f"Provisioning certificates for environment "
+                f"'{target_env.name}' using mode '{target_env.certificate_mode}'..."
+            )
+            try:
+                # Create environment-specific config manager
+                env_config_manager = ConfigurationManager(target_env.base_path)
+                success = env_config_manager.provision_certificates(
+                    domain=target_env.domain,
+                    admin_email=target_env.admin_email,
+                    certificate_mode=target_env.certificate_mode,
+                    force=False,
+                )
+                if success:
+                    click.echo("✅ Certificates ready for environment")
+                else:
+                    click.echo("⚠️  Certificate provisioning failed")
+            except Exception as e:
+                click.echo(f"⚠️  Certificate provisioning error: {e}")
 
     except Exception as e:
         click.echo(f"Error switching environment: {e}", err=True)
@@ -119,6 +272,12 @@ def switch_environment(name: str) -> None:
 @click.option("--domain", required=True, help="Primary domain for environment")
 @click.option("--admin-email", required=True, help="Admin email for environment")
 @click.option(
+    "--certificate-mode",
+    type=click.Choice(["self_signed", "le_staging", "le_production"]),
+    default="self_signed",
+    help="Default certificate mode for environment",
+)
+@click.option(
     "--tag", "-t", multiple=True, help="Environment tags (can be used multiple times)"
 )
 def add_environment(
@@ -127,6 +286,7 @@ def add_environment(
     base_path: str,
     domain: str,
     admin_email: str,
+    certificate_mode: str,
     tag: List[str],
 ) -> None:
     """Add a new environment."""
@@ -138,6 +298,7 @@ def add_environment(
             base_path=base_path,
             domain=domain,
             admin_email=admin_email,
+            certificate_mode=certificate_mode,
             tags=list(tag),
         )
         click.echo(f"Created environment '{env.name}' at {env.base_path}")
@@ -182,8 +343,22 @@ def remove_environment(name: str, force: bool) -> None:
 def enable_environment(name: str) -> None:
     """Enable an environment."""
     try:
-        config_manager = _get_config_manager()
-        config_manager.enable_environment(name)
+        _, env_config = _get_environments_config()
+
+        # Find environment
+        target_env = None
+        for env in env_config.environments:
+            if env.name == name:
+                target_env = env
+                break
+
+        if not target_env:
+            raise ValueError(f"Environment '{name}' not found")
+
+        # Enable environment
+        target_env.enabled = True
+        _save_environments_config(env_config)
+
         click.echo(f"Enabled environment '{name}'")
 
     except Exception as e:
@@ -225,6 +400,7 @@ def show_environment_info(name: str) -> None:
         click.echo(f"Domain: {env.domain}")
         click.echo(f"Base Path: {env.base_path}")
         click.echo(f"Admin Email: {env.admin_email}")
+        click.echo(f"Certificate Mode: {env.certificate_mode}")
         click.echo(f"Tags: {', '.join(env.tags) if env.tags else 'None'}")
         click.echo(f"Enabled: {'Yes' if env.enabled else 'No'}")
         click.echo(f"Current: {'Yes' if is_current else 'No'}")
@@ -256,22 +432,45 @@ def show_environment_info(name: str) -> None:
 @click.option(
     "--force", is_flag=True, help="Force initialization even if config exists"
 )
-def init_environments(force: bool) -> None:
+@click.option(
+    "--provision-certs",
+    is_flag=True,
+    help="Automatically provision certificates for development environment",
+)
+@click.option(
+    "--config-file",
+    help="Path to environments.yaml file (default: ./environments.yaml)",
+)
+@click.option(
+    "--environments-dir",
+    help="Base directory for environment directories (default: ./environments)",
+)
+def init_environments(
+    force: bool, provision_certs: bool, config_file: str, environments_dir: str
+) -> None:
     """Initialize environments configuration with defaults."""
     try:
-        # Create minimal base directory structure for environments config only
-        base_path = Path.home() / ".net-servers"
-        config_path = base_path / "config"
+        # Determine paths
+        if config_file:
+            env_config_path = Path(config_file).resolve()
+        else:
+            env_config_path = Path(_get_environments_config_path())
+
+        if environments_dir:
+            environments_base = Path(environments_dir).resolve()
+        else:
+            environments_base = Path(_get_environments_base_path())
 
         # Check if environments.yaml already exists
-        env_config_path = config_path / "environments.yaml"
         if env_config_path.exists() and not force:
-            click.echo("Environments configuration already exists.")
+            click.echo(
+                f"Environments configuration already exists at {env_config_path}"
+            )
             click.echo("Use --force to reinitialize.")
             return
 
-        # Create only the config directory needed for environments.yaml
-        config_path.mkdir(parents=True, exist_ok=True)
+        # Create parent directory for config file if needed
+        env_config_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Create environments configuration
         from datetime import datetime
@@ -285,45 +484,49 @@ def init_environments(force: bool) -> None:
                 EnvironmentConfig(
                     name="development",
                     description="Development environment for local testing",
-                    base_path=str(base_path / "development"),
+                    base_path=str(environments_base / "development"),
                     domain="local.dev",
                     admin_email="admin@local.dev",
                     tags=["development", "local"],
                     created_at=now,
                     last_used=now,
+                    certificate_mode="self_signed",
                 ),
                 EnvironmentConfig(
                     name="staging",
                     description="Staging environment for pre-production testing",
-                    base_path=str(base_path / "staging"),
+                    base_path=str(environments_base / "staging"),
                     domain="staging.local.dev",
                     admin_email="admin@local.dev",
                     tags=["staging", "testing"],
                     created_at=now,
                     last_used=now,
                     enabled=False,
+                    certificate_mode="le_staging",
                 ),
                 EnvironmentConfig(
                     name="testing",
                     description="Testing environment for integration tests",
-                    base_path=str(base_path / "testing"),
+                    base_path=str(environments_base / "testing"),
                     domain="testing.local.dev",
                     admin_email="admin@local.dev",
                     tags=["testing", "integration", "ci-cd"],
                     created_at=now,
                     last_used=now,
                     enabled=False,
+                    certificate_mode="self_signed",
                 ),
                 EnvironmentConfig(
                     name="production",
                     description="Production environment for live services",
-                    base_path=str(base_path / "production"),
+                    base_path=str(environments_base / "production"),
                     domain="example.com",
                     admin_email="admin@local.dev",
                     tags=["production", "live"],
                     created_at=now,
                     last_used=now,
                     enabled=False,
+                    certificate_mode="le_production",
                 ),
             ],
         )
@@ -333,6 +536,9 @@ def init_environments(force: bool) -> None:
 
         save_yaml_config(default_environments, env_config_path)
 
+        click.echo(f"✅ Created environments configuration at {env_config_path}")
+        click.echo(f"✅ Environment directories will be created in {environments_base}")
+
         # Create directory structure for all environments
         from net_servers.config.schemas import ConfigurationPaths
 
@@ -341,7 +547,7 @@ def init_environments(force: bool) -> None:
             env_paths.ensure_directories()
 
         # Initialize the current environment's configuration files
-        # Use the development environment's base path
+        # Create a manager specifically for the development environment
         dev_env = next(
             env
             for env in default_environments.environments
@@ -349,15 +555,46 @@ def init_environments(force: bool) -> None:
         )
         from net_servers.config.manager import ConfigurationManager
 
-        config_manager = ConfigurationManager(dev_env.base_path)
-        config_manager.initialize_default_configs()
+        # Create environment-specific configuration manager
+        env_config_manager = ConfigurationManager(dev_env.base_path)
+        env_config_manager.initialize_default_configs()
+
+        # Optionally provision certificates for the development environment
+        if provision_certs:
+            click.echo(
+                "Provisioning default certificates for development environment..."
+            )
+            try:
+                # Use the environment-specific config manager for certificate operations
+                success = env_config_manager.provision_certificates(
+                    domain=dev_env.domain,
+                    admin_email=dev_env.admin_email,
+                    certificate_mode=dev_env.certificate_mode,
+                    force=False,
+                )
+                if success:
+                    click.echo("✅ Certificates provisioned for development environment")
+                else:
+                    click.echo(
+                        "⚠️  Certificate provisioning failed for development "
+                        "environment"
+                    )
+            except Exception as e:
+                click.echo(f"⚠️  Certificate provisioning error: {e}")
+        else:
+            click.echo(
+                "💡 Use --provision-certs to automatically provision certificates"
+            )
+
         click.echo("Initialized environments configuration with defaults:")
 
         # Show created environments
-        environments = config_manager.list_environments()
-        for env in environments:
-            current_name = config_manager.environments_config.current_environment
-            status = "current" if env.name == current_name else "available"
+        for env in default_environments.environments:
+            status = (
+                "current"
+                if env.name == default_environments.current_environment
+                else "available"
+            )
             click.echo(f"  - {env.name}: {env.description} ({status})")  # noqa: E221
 
     except Exception as e:

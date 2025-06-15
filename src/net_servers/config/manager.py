@@ -26,15 +26,20 @@ from .schemas import (
 class ConfigurationManager:
     """Manages configuration loading, validation, and persistence."""
 
-    def __init__(self, base_path: str = "/data"):
+    def __init__(
+        self, base_path: str = "/data", environments_config_path: Optional[str] = None
+    ):
         """Initialize configuration manager."""
         self.logger = logging.getLogger(__name__)
         self.paths = ConfigurationPaths(base_path=Path(base_path))
 
+        # Store environments config path (should be at project root)
+        self._environments_config_path = environments_config_path
+
         # Ensure directory structure exists
         self.paths.ensure_directories()
 
-        # Certificate manager for SSL support
+        # Certificate manager for SSL support (environment-specific)
         self.cert_manager = CertificateManager(
             str(self.paths.state_path / "certificates")
         )
@@ -86,8 +91,25 @@ class ConfigurationManager:
     def environments_config(self) -> EnvironmentsConfig:
         """Get environments configuration."""
         if self._environments_config is None:
+            # Load environments.yaml from project root
+            if self._environments_config_path:
+                env_config_path = Path(self._environments_config_path)
+            else:
+                # Fallback: try to find environments.yaml in project root
+                from ..cli_environments import _get_environments_config_path
+
+                env_config_path = Path(_get_environments_config_path())
+
+            # Environments.yaml must exist - no fallbacks
+            if not env_config_path.exists():
+                raise FileNotFoundError(
+                    f"Environments configuration not found at {env_config_path}. "
+                    f"Initialize environments with: "
+                    f"python -m net_servers.cli environments init"
+                )
+
             self._environments_config = load_yaml_config(
-                self.paths.config_path / "environments.yaml", EnvironmentsConfig
+                env_config_path, EnvironmentsConfig
             )
         return self._environments_config
 
@@ -336,6 +358,7 @@ class ConfigurationManager:
                         tags=["development", "local"],
                         created_at=now,
                         last_used=now,
+                        certificate_mode="self_signed",
                     ),
                     EnvironmentConfig(
                         name="staging",
@@ -347,6 +370,7 @@ class ConfigurationManager:
                         created_at=now,
                         last_used=now,
                         enabled=False,
+                        certificate_mode="le_staging",
                     ),
                     EnvironmentConfig(
                         name="testing",
@@ -358,6 +382,7 @@ class ConfigurationManager:
                         created_at=now,
                         last_used=now,
                         enabled=False,
+                        certificate_mode="self_signed",
                     ),
                     EnvironmentConfig(
                         name="production",
@@ -371,6 +396,7 @@ class ConfigurationManager:
                         created_at=now,
                         last_used=now,
                         enabled=False,
+                        certificate_mode="le_production",
                     ),
                 ],
             )
@@ -533,6 +559,7 @@ class ConfigurationManager:
         base_path: str,
         domain: str,
         admin_email: str,
+        certificate_mode: str = "self_signed",
         tags: Optional[List[str]] = None,
     ) -> EnvironmentConfig:
         """Add a new environment."""
@@ -546,6 +573,7 @@ class ConfigurationManager:
             base_path=base_path,
             domain=domain,
             admin_email=admin_email,
+            certificate_mode=certificate_mode,
             tags=tags or [],
             created_at=now,
             last_used=now,
@@ -623,3 +651,151 @@ class ConfigurationManager:
         env.enabled = False
         self.save_environments_config(self.environments_config)
         self.logger.info(f"Disabled environment '{name}'")
+
+    def get_environment_certificate_manager(
+        self, environment_name: Optional[str] = None
+    ) -> CertificateManager:
+        """Get certificate manager for specific environment."""
+        if environment_name is None:
+            # Use current environment
+            return self.cert_manager
+
+        env = self.get_environment(environment_name)
+        if not env:
+            raise ValueError(f"Environment '{environment_name}' not found")
+
+        env_paths = ConfigurationPaths(base_path=Path(env.base_path))
+        cert_path = str(env_paths.state_path / "certificates")
+        return CertificateManager(cert_path)
+
+    def provision_certificates(
+        self,
+        domain: str,
+        admin_email: str,
+        certificate_mode: str = "self_signed",
+        force: bool = False,
+    ) -> bool:
+        """Provision certificates for the current environment."""
+        self.logger.info(
+            f"Provisioning certificates for domain '{domain}' using mode "
+            f"'{certificate_mode}'"
+        )
+
+        # Map certificate mode to CertificateMode enum
+        mode_mapping = {
+            "self_signed": CertificateMode.SELF_SIGNED,
+            "le_staging": CertificateMode.STAGING,
+            "le_production": CertificateMode.PRODUCTION,
+        }
+
+        if certificate_mode not in mode_mapping:
+            self.logger.error(f"Unknown certificate mode '{certificate_mode}'")
+            return False
+
+        cert_mode = mode_mapping[certificate_mode]
+
+        # Create certificate configuration
+        cert_base_path = str(self.cert_manager.base_path / domain)
+        config = CertificateConfig(
+            domain=domain,
+            email=admin_email,
+            mode=cert_mode,
+            san_domains=[
+                f"mail.{domain}",
+                f"www.{domain}",
+                f"dns.{domain}",
+            ],
+            cert_path=f"{cert_base_path}/cert.pem",
+            key_path=f"{cert_base_path}/privkey.pem",
+            fullchain_path=f"{cert_base_path}/fullchain.pem",
+            auto_renew=True,
+        )
+
+        # Check if certificates already exist
+        if not force and self.cert_manager._validate_existing_certificate(config):
+            self.logger.info(f"Certificates already exist for {domain}")
+            return True
+
+        # Provision the certificate
+        success = self.cert_manager.provision_certificate(config)
+
+        if success:
+            self.logger.info(f"Successfully provisioned certificates for {domain}")
+        else:
+            self.logger.error(f"Failed to provision certificates for {domain}")
+
+        return success
+
+    def provision_environment_certificates(
+        self, environment_name: Optional[str] = None, force: bool = False
+    ) -> bool:
+        """Provision certificates for an environment based on its default mode."""
+        env = (
+            self.get_environment(environment_name)
+            if environment_name
+            else self.get_current_environment()
+        )
+        if not env:
+            raise ValueError(f"Environment '{environment_name}' not found")
+
+        self.logger.info(
+            f"Provisioning certificates for environment '{env.name}' "
+            f"using mode '{env.certificate_mode}'"
+        )
+
+        # Get environment-specific certificate manager
+        cert_manager = self.get_environment_certificate_manager(env.name)
+
+        # Map environment certificate mode to CertificateMode enum
+        mode_mapping = {
+            "self_signed": CertificateMode.SELF_SIGNED,
+            "le_staging": CertificateMode.STAGING,
+            "le_production": CertificateMode.PRODUCTION,
+        }
+
+        if env.certificate_mode not in mode_mapping:
+            self.logger.error(
+                f"Unknown certificate mode '{env.certificate_mode}' for "
+                f"environment '{env.name}'"
+            )
+            return False
+
+        cert_mode = mode_mapping[env.certificate_mode]
+
+        # Create certificate configuration with environment-specific paths
+        cert_base_path = str(cert_manager.base_path / env.domain)
+        config = CertificateConfig(
+            domain=env.domain,
+            email=env.admin_email,
+            mode=cert_mode,
+            san_domains=[
+                f"mail.{env.domain}",
+                f"www.{env.domain}",
+                f"dns.{env.domain}",
+            ],
+            cert_path=f"{cert_base_path}/cert.pem",
+            key_path=f"{cert_base_path}/privkey.pem",
+            fullchain_path=f"{cert_base_path}/fullchain.pem",
+            auto_renew=True,
+        )
+
+        # Check if certificates already exist
+        if not force and cert_manager._validate_existing_certificate(config):
+            self.logger.info(
+                f"Certificates already exist for {env.domain} in environment "
+                f"'{env.name}'"
+            )
+            return True
+
+        # Provision the certificate
+        success = cert_manager.provision_certificate(config)
+
+        if success:
+            self.logger.info(
+                f"Successfully provisioned {env.certificate_mode} certificates "
+                f"for {env.domain}"
+            )
+        else:
+            self.logger.error(f"Failed to provision certificates for {env.domain}")
+
+        return success
