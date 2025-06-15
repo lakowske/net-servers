@@ -47,8 +47,8 @@ def _get_environments_base_path() -> str:
     if base_path:
         return os.path.abspath(base_path)
 
-    # Container environment
-    if os.path.exists("/data"):
+    # Container environment (only if we can write to /data)
+    if os.path.exists("/data") and os.access("/data", os.W_OK):
         return "/data/environments"
 
     # Default to project workspace
