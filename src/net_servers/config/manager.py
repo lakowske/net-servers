@@ -144,7 +144,15 @@ class ConfigurationManager:
 
     def save_environments_config(self, config: EnvironmentsConfig) -> None:
         """Save environments configuration to disk."""
-        save_yaml_config(config, self.paths.config_path / "environments.yaml")
+        # Always save environments.yaml to project root, not environment-specific config
+        if self._environments_config_path:
+            env_config_path = Path(self._environments_config_path)
+        else:
+            from ..cli_environments import _get_environments_config_path
+
+            env_config_path = Path(_get_environments_config_path())
+
+        save_yaml_config(config, env_config_path)
         self._environments_config = config
 
     def get_container_volumes(self, development_mode: bool = True) -> List[VolumeMount]:
@@ -343,64 +351,10 @@ class ConfigurationManager:
             default_services.mail.virtual_domains = [self.global_config.system.domain]
             self.save_services_config(default_services)
 
-        # Create default environments config
-        if not (self.paths.config_path / "environments.yaml").exists():
-            now = datetime.now().isoformat()
-            default_environments = EnvironmentsConfig(
-                current_environment="development",
-                environments=[
-                    EnvironmentConfig(
-                        name="development",
-                        description="Development environment for local testing",
-                        base_path=str(self.paths.base_path / "development"),
-                        domain=self.global_config.system.domain,
-                        admin_email=self.global_config.system.admin_email,
-                        tags=["development", "local"],
-                        created_at=now,
-                        last_used=now,
-                        certificate_mode="self_signed",
-                    ),
-                    EnvironmentConfig(
-                        name="staging",
-                        description="Staging environment for pre-production testing",
-                        base_path=str(self.paths.base_path / "staging"),
-                        domain=f"staging.{self.global_config.system.domain}",
-                        admin_email=self.global_config.system.admin_email,
-                        tags=["staging", "testing"],
-                        created_at=now,
-                        last_used=now,
-                        enabled=False,
-                        certificate_mode="le_staging",
-                    ),
-                    EnvironmentConfig(
-                        name="testing",
-                        description="Testing environment for integration tests",
-                        base_path=str(self.paths.base_path / "testing"),
-                        domain=f"testing.{self.global_config.system.domain}",
-                        admin_email=self.global_config.system.admin_email,
-                        tags=["testing", "integration", "ci-cd"],
-                        created_at=now,
-                        last_used=now,
-                        enabled=False,
-                        certificate_mode="self_signed",
-                    ),
-                    EnvironmentConfig(
-                        name="production",
-                        description="Production environment for live services",
-                        base_path=str(self.paths.base_path / "production"),
-                        domain=self.global_config.system.domain.replace(
-                            "local.dev", "example.com"
-                        ),
-                        admin_email=self.global_config.system.admin_email,
-                        tags=["production", "live"],
-                        created_at=now,
-                        last_used=now,
-                        enabled=False,
-                        certificate_mode="le_production",
-                    ),
-                ],
-            )
-            self.save_environments_config(default_environments)
+        # Note: environments.yaml should only be created at project root level
+        # via 'python -m net_servers.cli environments init' command.
+        # Individual environment config managers should not create
+        # environments.yaml files.
 
     def validate_configuration(self) -> List[str]:
         """Validate all configuration and return list of errors."""
@@ -566,6 +520,13 @@ class ConfigurationManager:
         if self.get_environment(name):
             raise ValueError(f"Environment '{name}' already exists")
 
+        # Generate dynamic port mappings for the new environment
+        from ..config.containers import generate_environment_port_mappings
+
+        port_mappings = generate_environment_port_mappings(
+            name, self.environments_config
+        )
+
         now = datetime.now().isoformat()
         env_config = EnvironmentConfig(
             name=name,
@@ -577,6 +538,7 @@ class ConfigurationManager:
             tags=tags or [],
             created_at=now,
             last_used=now,
+            port_mappings=port_mappings,
         )
 
         # Update configuration
@@ -590,6 +552,7 @@ class ConfigurationManager:
         env_paths.ensure_directories()
 
         self.logger.info(f"Created environment '{name}' at {base_path}")
+        self.logger.info(f"Generated port mappings for '{name}': {port_mappings}")
         return env_config
 
     def remove_environment(self, name: str) -> None:

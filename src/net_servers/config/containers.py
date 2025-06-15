@@ -1,6 +1,8 @@
 """Container configuration management."""
 
-from typing import Dict, Optional
+import random
+import socket
+from typing import Any, Dict, List, Optional
 
 from net_servers.actions.container import ContainerConfig, PortMapping
 
@@ -123,6 +125,122 @@ ENVIRONMENT_PORT_MAPPINGS = {
 # Legacy testing port mappings (for backward compatibility)
 TESTING_PORT_MAPPINGS = ENVIRONMENT_PORT_MAPPINGS["development"]
 
+# Port allocation range for dynamic environments (avoid system and well-known ports)
+DYNAMIC_PORT_RANGE = (8500, 9999)
+
+# Service container port templates for dynamic allocation
+SERVICE_CONTAINER_PORTS = {
+    "apache": [
+        {"container_port": 80, "protocol": "tcp"},
+        {"container_port": 443, "protocol": "tcp"},
+    ],
+    "mail": [
+        {"container_port": 25, "protocol": "tcp"},  # SMTP
+        {"container_port": 143, "protocol": "tcp"},  # IMAP
+        {"container_port": 110, "protocol": "tcp"},  # POP3
+        {"container_port": 993, "protocol": "tcp"},  # IMAPS
+        {"container_port": 995, "protocol": "tcp"},  # POP3S
+        {"container_port": 587, "protocol": "tcp"},  # SMTP submission
+    ],
+    "dns": [
+        {"container_port": 53, "protocol": "udp"},
+        {"container_port": 53, "protocol": "tcp"},
+    ],
+}
+
+
+def _is_port_available(port: int) -> bool:
+    """Check if a port is available for binding."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("localhost", port))
+            return True
+        except OSError:
+            return False
+
+
+def _find_available_port(
+    start_range: Optional[int] = None, end_range: Optional[int] = None
+) -> int:
+    """Find a random available port in the specified range."""
+    start_range = start_range or DYNAMIC_PORT_RANGE[0]
+    end_range = end_range or DYNAMIC_PORT_RANGE[1]
+
+    max_attempts = 100
+    for _ in range(max_attempts):
+        port = random.randint(start_range, end_range)  # nosec B311
+        if _is_port_available(port):
+            return port
+
+    raise RuntimeError(
+        f"Could not find available port in range {start_range}-{end_range}"
+    )
+
+
+def _get_all_used_ports(environments_config: Optional[Any] = None) -> set:
+    """Get all ports currently used by environments."""
+    used_ports = set()
+
+    # Add predefined environment ports
+    for env_name, services in ENVIRONMENT_PORT_MAPPINGS.items():
+        for service_name, port_mappings in services.items():
+            for pm in port_mappings:
+                used_ports.add(pm.host_port)
+
+    # Add dynamic environment ports if config provided
+    if environments_config:
+        for env in environments_config.environments:
+            if hasattr(env, "port_mappings") and env.port_mappings:
+                for service_name, port_configs in env.port_mappings.items():
+                    for port_config in port_configs:
+                        if "host_port" in port_config:
+                            used_ports.add(port_config["host_port"])
+
+    return used_ports
+
+
+def generate_environment_port_mappings(
+    environment_name: str, environments_config: Optional[Any] = None
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Generate random port mappings for a new environment.
+
+    Args:
+        environment_name: Name of the environment
+        environments_config: Existing environments config to avoid conflicts
+
+    Returns:
+        Dict mapping service names to port configuration lists
+    """
+    used_ports = _get_all_used_ports(environments_config)
+    port_mappings = {}
+
+    for service_name, container_ports in SERVICE_CONTAINER_PORTS.items():
+        service_mappings = []
+
+        for port_spec in container_ports:
+            # Find available port avoiding conflicts
+            max_attempts = 100
+            for _ in range(max_attempts):
+                host_port = _find_available_port()
+                if host_port not in used_ports:
+                    break
+            else:
+                raise RuntimeError(f"Could not allocate unique port for {service_name}")
+
+            used_ports.add(host_port)
+            service_mappings.append(
+                {
+                    "host_port": host_port,
+                    "container_port": port_spec["container_port"],
+                    "protocol": port_spec.get("protocol", "tcp"),
+                }
+            )
+
+        port_mappings[service_name] = service_mappings
+
+    return port_mappings
+
+
 # Base container configurations
 CONTAINER_CONFIGS: Dict[str, ContainerConfig] = {
     "apache": ContainerConfig(
@@ -193,11 +311,42 @@ def get_container_config(
     container_name = f"{base_name}-{environment_name}"
 
     # Use environment-specific ports to avoid conflicts between environments
-    if environment_name in ENVIRONMENT_PORT_MAPPINGS:
-        port_mappings = ENVIRONMENT_PORT_MAPPINGS[environment_name][name].copy()
-    else:
-        # Fallback to development ports for unknown environments
-        port_mappings = ENVIRONMENT_PORT_MAPPINGS["development"][name].copy()
+    port_mappings = []
+
+    # First, try to get port mappings from environment configuration
+    if use_config_manager:
+        try:
+            from net_servers.cli_environments import _get_config_manager
+
+            config_manager = _get_config_manager()
+            current_env = config_manager.get_current_environment()
+
+            # Check if environment has stored port mappings
+            if (
+                hasattr(current_env, "port_mappings")
+                and current_env.port_mappings
+                and name in current_env.port_mappings
+            ):
+                # Convert stored port configs to PortMapping objects
+                for port_config in current_env.port_mappings[name]:
+                    port_mappings.append(
+                        PortMapping(
+                            host_port=port_config["host_port"],
+                            container_port=port_config["container_port"],
+                            protocol=port_config.get("protocol", "tcp"),
+                        )
+                    )
+        except Exception:  # nosec B110
+            # Fall through to predefined mappings if config fails
+            pass
+
+    # Fallback to predefined environment mappings if no stored mappings found
+    if not port_mappings:
+        if environment_name in ENVIRONMENT_PORT_MAPPINGS:
+            port_mappings = ENVIRONMENT_PORT_MAPPINGS[environment_name][name].copy()
+        else:
+            # Fallback to development ports for unknown environments
+            port_mappings = ENVIRONMENT_PORT_MAPPINGS["development"][name].copy()
 
     primary_port = port_mappings[0].host_port if port_mappings else original.port
 

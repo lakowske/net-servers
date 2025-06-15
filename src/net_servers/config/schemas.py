@@ -201,6 +201,9 @@ class EnvironmentConfig(BaseModel):
         default="self_signed",
         description="Default certificate mode (self_signed, le_staging, le_production)",
     )
+    port_mappings: Dict[str, List[Dict[str, Any]]] = Field(
+        default_factory=dict, description="Service port mappings for this environment"
+    )
 
 
 class EnvironmentsConfig(BaseModel):

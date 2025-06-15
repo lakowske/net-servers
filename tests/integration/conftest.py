@@ -20,18 +20,18 @@ class ContainerTestHelper:
 
         Args:
             config_name: Name of the container configuration to use
-            port_mapping: Optional port mapping string, if None will use testing
+            port_mapping: Optional port mapping string, if None will use current
                 environment ports
         """
         self.config_name = config_name
-        # Use testing environment for integration tests
-        self.config = get_container_config(config_name, environment_name="testing")
+        # Use current environment for integration tests (auto-detected)
+        self.config = get_container_config(config_name, environment_name=None)
         self.manager = ContainerManager(self.config)
         self.port_mapping = port_mapping
 
-        # If no port mapping provided, use testing environment ports
+        # If no port mapping provided, use current environment ports
         if self.port_mapping is None:
-            # Use the testing environment port mappings directly
+            # Use the current environment port mappings directly
             if self.config.port_mappings:
                 mapping_parts = []
                 for pm in self.config.port_mappings:
@@ -159,7 +159,7 @@ class ContainerTestHelper:
 
     def get_container_port(self, internal_port: int) -> int:
         """Get the host port mapped to the container's internal port."""
-        # First try to get from testing environment configuration
+        # First try to get from current environment configuration
         for port_mapping in self.config.port_mappings:
             if port_mapping.container_port == internal_port:
                 return port_mapping.host_port
