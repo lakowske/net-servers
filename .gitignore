@@ -170,6 +170,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Environments
+# Environment directories (but track environments.yaml config file)
 environments/
-environments.yaml
+# Personal environment configurations
+environments.yaml.personal

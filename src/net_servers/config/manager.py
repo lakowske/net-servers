@@ -405,13 +405,14 @@ class ConfigurationManager:
                             f"{env.admin_email}"
                         )
 
-                    # Validate base path
+                    # Validate base path (basic validation only)
                     try:
                         base_path = Path(env.base_path)
-                        if not base_path.is_absolute():
+                        # Just check that it's a valid path, allow relative and absolute
+                        if not str(base_path).strip():
                             errors.append(
-                                f"Environment {env.name} base_path must be "
-                                f"absolute: {env.base_path}"
+                                f"Empty base_path for environment {env.name}: "
+                                f"{env.base_path}"
                             )
                     except Exception:
                         errors.append(

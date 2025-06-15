@@ -1,0 +1,57 @@
+current_environment: development
+environments:
+- name: development
+  description: Development environment for local testing
+  base_path: ./environments/development
+  domain: local.dev
+  admin_email: admin@local.dev
+  enabled: true
+  tags:
+  - development
+  - local
+  created_at: '2024-01-01T00:00:00'
+  last_used: '2024-01-01T00:00:00'
+  certificate_mode: self_signed
+  port_mappings: {}
+- name: testing
+  description: Testing environment for integration tests
+  base_path: ./environments/testing
+  domain: testing.local.dev
+  admin_email: admin@local.dev
+  enabled: true
+  tags:
+  - testing
+  - integration
+  - ci-cd
+  created_at: '2024-01-01T00:00:00'
+  last_used: '2024-01-01T00:00:00'
+  certificate_mode: self_signed
+  port_mappings: {}
+- name: staging
+  description: Staging environment for pre-production testing
+  base_path: ./environments/staging
+  domain: staging.local.dev
+  admin_email: admin@local.dev
+  enabled: true
+  tags:
+  - staging
+  - testing
+  - pre-production
+  created_at: '2024-01-01T00:00:00'
+  last_used: '2024-01-01T00:00:00'
+  certificate_mode: self_signed
+  port_mappings: {}
+- name: production
+  description: Production environment for live services
+  base_path: ./environments/production
+  domain: example.com
+  admin_email: admin@example.com
+  enabled: false
+  tags:
+  - production
+  - live
+  - critical
+  created_at: '2024-01-01T00:00:00'
+  last_used: '2024-01-01T00:00:00'
+  certificate_mode: le_production
+  port_mappings: {}
